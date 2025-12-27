@@ -3,285 +3,248 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>羊奶配送系統 v8.0 - 終極連線診斷版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, remove, push } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <title>Firebase 雲端記帳本</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+        h2 { text-align: center; color: #333; }
+        
+        /* 表單樣式 */
+        .input-group { margin-bottom: 10px; }
+        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button#submitBtn { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        button#submitBtn:hover { background-color: #218838; }
+        button#cancelBtn { width: 100%; padding: 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; display: none; }
 
-        // 【請注意】如果您的資料庫不是開在美國，請手動替換下方的 databaseURL
-        const firebaseConfig = {
-            apiKey: "AIzaSyALj-w6MSC_5CgGCVUVFveoV8-ykRxcu24",
-            authDomain: "crm-1225-003.firebaseapp.com",
-            projectId: "crm-1225-003",
-            storageBucket: "crm-1225-003.firebasestorage.app",
-            messagingSenderId: "566985177794",
-            appId: "1:566985177794:web:fcf21c033bd62c3bd7195b",
-            databaseURL: "https://crm-1225-003-default-rtdb.firebaseio.com" 
-        };
+        /* 列表樣式 */
+        ul { list-style: none; padding: 0; margin-top: 20px; }
+        li { background: #fff; border-bottom: 1px solid #eee; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        li:last-child { border-bottom: none; }
+        .item-info { display: flex; flex-direction: column; }
+        .item-name { font-weight: bold; font-size: 1.1em; }
+        .item-date { font-size: 0.8em; color: #888; }
+        .actions button { margin-left: 5px; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+        .edit-btn { background-color: #ffc107; color: #333; }
+        .delete-btn { background-color: #dc3545; color: white; }
+        
+        /* 提示訊息 */
+        #statusMsg { text-align: center; margin-top: 10px; height: 20px; font-size: 0.9em; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>💰 雲端記帳本</h2>
+    
+    <div class="input-group">
+        <input type="text" id="itemName" placeholder="項目名稱 (例如: 午餐)" required>
+    </div>
+    <div class="input-group">
+        <input type="number" id="itemAmount" placeholder="金額" required>
+    </div>
+    <div class="input-group">
+        <input type="date" id="itemDate" required>
+    </div>
+    
+    <button id="submitBtn">新增紀錄</button>
+    <button id="cancelBtn">取消修改</button>
+    <div id="statusMsg"></div>
+
+    <ul id="expenseList">
+        <li style="justify-content:center; color:#888;">載入資料中...</li>
+    </ul>
+</div>
+
+<script type="module">
+    // 1. 引入必要的 Firebase 函式庫
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+        getFirestore, 
+        collection, 
+        addDoc, 
+        onSnapshot, 
+        doc, 
+        deleteDoc, 
+        updateDoc,
+        query,
+        orderBy,
+        serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // 2. 您的 Firebase 設定
+    const firebaseConfig = {
+        apiKey: "AIzaSyALj-w6MSC_5CgGCVUVFveoV8-ykRxcu24",
+        authDomain: "crm-1225-003.firebaseapp.com",
+        projectId: "crm-1225-003",
+        storageBucket: "crm-1225-003.firebasestorage.app",
+        messagingSenderId: "566985177794",
+        appId: "1:566985177794:web:fcf21c033bd62c3bd7195b"
+    };
+
+    // 3. 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const dbCollection = "expenses"; // 資料庫集合名稱
+
+    // DOM 元素
+    const itemNameInput = document.getElementById('itemName');
+    const itemAmountInput = document.getElementById('itemAmount');
+    const itemDateInput = document.getElementById('itemDate');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const expenseList = document.getElementById('expenseList');
+    const statusMsg = document.getElementById('statusMsg');
+
+    // 設定預設日期為今天
+    itemDateInput.valueAsDate = new Date();
+
+    // 變數：用來記錄現在是否正在「編輯模式」以及正在編輯哪一筆 ID
+    let isEditing = false;
+    let currentEditId = null;
+
+    // --- 功能函式 ---
+
+    // 顯示提示訊息
+    function showMessage(msg, type) {
+        statusMsg.textContent = msg;
+        statusMsg.className = type;
+        setTimeout(() => {
+            statusMsg.textContent = "";
+            statusMsg.className = "";
+        }, 3000);
+    }
+
+    // 重置表單
+    function resetForm() {
+        itemNameInput.value = '';
+        itemAmountInput.value = '';
+        itemDateInput.valueAsDate = new Date();
+        isEditing = false;
+        currentEditId = null;
+        submitBtn.textContent = "新增紀錄";
+        submitBtn.style.backgroundColor = "#28a745";
+        cancelBtn.style.display = "none";
+    }
+
+    // 4. 監聽資料庫變化 (Read) - 即時更新列表
+    const q = query(collection(db, dbCollection), orderBy("date", "desc"));
+    
+    onSnapshot(q, (snapshot) => {
+        expenseList.innerHTML = ""; // 清空列表
+        if (snapshot.empty) {
+            expenseList.innerHTML = `<li style="justify-content:center; color:#888;">目前沒有紀錄</li>`;
+            return;
+        }
+
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <div class="item-info">
+                    <span class="item-name">${data.name}</span>
+                    <span class="item-date">${data.date}</span>
+                </div>
+                <div style="font-weight:bold; margin-right:15px;">$${data.amount}</div>
+                <div class="actions">
+                    <button class="edit-btn" data-id="${doc.id}" data-name="${data.name}" data-amount="${data.amount}" data-date="${data.date}">編輯</button>
+                    <button class="delete-btn" data-id="${doc.id}">刪除</button>
+                </div>
+            `;
+            expenseList.appendChild(li);
+        });
+
+        // 綁定按鈕事件 (因為是動態生成的，所以要在生成後綁定)
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', handleDelete);
+        });
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', handleEditSetup);
+        });
+    });
+
+    // 5. 新增或更新資料 (Create / Update)
+    submitBtn.addEventListener('click', async () => {
+        const name = itemNameInput.value.trim();
+        const amount = Number(itemAmountInput.value);
+        const date = itemDateInput.value;
+
+        if (!name || !amount || !date) {
+            showMessage("請填寫完整資訊！", "error");
+            return;
+        }
+
+        submitBtn.disabled = true;
 
         try {
-            const app = initializeApp(firebaseConfig);
-            window.db = getDatabase(app);
-            window.dbRef = ref;
-            window.dbSet = set;
-            window.dbUpdate = update;
-            window.dbRemove = remove;
-            window.dbPush = push;
-            window.dbOnValue = onValue;
-            console.log("Firebase App 初始化成功");
-        } catch(e) {
-            console.error("Firebase 初始化失敗:", e);
-            alert("Firebase 初始化失敗，請檢查 Console");
-        }
-    </script>
-</head>
-<body class="bg-gray-100 text-gray-800 font-sans">
-    <div id="app" class="min-h-screen flex flex-col">
-        
-        <div class="p-2 text-white text-xs flex justify-between items-center" :class="connectionStatus === 'connected' ? 'bg-emerald-600' : 'bg-rose-600'">
-            <div class="flex gap-4">
-                <span class="font-bold">連線狀態: {{ connectionStatusText }}</span>
-                <span>(專案: crm-1225-003)</span>
-            </div>
-            <div class="font-mono">{{ lastPing }}</div>
-        </div>
-
-        <nav class="bg-white p-4 shadow flex justify-between items-center">
-            <h1 class="font-bold text-lg">配送系統 v8.0 <span class="text-xs text-gray-400">診斷模式</span></h1>
-            <div class="flex gap-2">
-                <button @click="view='manager'" :class="view==='manager'?'bg-blue-600 text-white':'bg-gray-200'" class="px-4 py-1 rounded">經理</button>
-                <button @click="view='delivery'" :class="view==='delivery'?'bg-green-600 text-white':'bg-gray-200'" class="px-4 py-1 rounded">配送</button>
-            </div>
-        </nav>
-
-        <main class="p-4 max-w-5xl mx-auto w-full space-y-6">
-
-            <div v-if="view === 'manager'" class="bg-white p-6 rounded-xl shadow-lg border-2 border-indigo-100">
-                <h2 class="font-bold text-lg mb-2 text-indigo-900">🛠️ 第一步：連線與寫入測試</h2>
-                <p class="text-sm text-gray-500 mb-4">如果下方看板沒有資料，請先點擊此按鈕。系統會嘗試寫入一條測試數據，並告訴您錯誤原因。</p>
-                
-                <div class="flex gap-4">
-                    <button @click="forceTestWrite" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-indigo-700">
-                        🚀 發送測試封包 (Test Write)
-                    </button>
-                    <div class="flex-grow bg-black text-green-400 font-mono text-xs p-3 rounded h-24 overflow-y-auto">
-                        <div v-for="(log, i) in debugLogs" :key="i">[{{ log.time }}] {{ log.msg }}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="view === 'manager'" class="bg-white p-6 rounded-xl shadow border border-gray-200">
-                <h2 class="font-bold mb-4">➕ 新增客戶資料 (寫入測試)</h2>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <input v-model.number="form.order" type="number" placeholder="順序" class="border p-2 rounded">
-                    <input v-model="form.name" type="text" placeholder="姓名" class="border p-2 rounded">
-                    <select v-model="form.area" class="border p-2 rounded"><option>大埔</option><option>三峽</option></select>
-                    <select v-model="form.cycle" class="border p-2 rounded"><option>每天</option></select>
-                </div>
-                <div v-if="previewList.length > 0" class="mb-4 bg-amber-50 p-4 rounded border border-amber-200">
-                    <h3 class="font-bold text-amber-800 mb-2">待上傳清單 ({{ previewList.length }})</h3>
-                    <div v-for="p in previewList" class="text-xs mb-1 border-b pb-1">
-                        {{ p.order }}. {{ p.name }} ({{ p.area }})
-                    </div>
-                    <button @click="confirmRealUpload" class="mt-2 bg-amber-600 text-white px-4 py-2 rounded w-full font-bold">
-                        確認寫入雲端 (Real Upload)
-                    </button>
-                </div>
-                <button @click="addToPreview" class="bg-gray-800 text-white px-4 py-2 rounded w-full">加入預覽</button>
-            </div>
-
-            <div v-if="view === 'manager'" class="bg-white p-6 rounded-xl shadow border border-gray-200 min-h-[300px]">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h2 class="font-bold text-lg flex items-center gap-2">
-                        📡 雲端資料即時看板 
-                        <span v-if="customersList.length === 0" class="text-xs text-red-500 bg-red-50 px-2 py-1 rounded">目前無資料或讀取失敗</span>
-                        <span v-else class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">已讀取 {{ customersList.length }} 筆</span>
-                    </h2>
-                    <button @click="reloadPage" class="text-xs text-blue-500 underline">重新整理網頁</button>
-                </div>
-
-                <div v-if="loading" class="text-center py-10 text-gray-400 animate-pulse">正在嘗試讀取資料庫...</div>
-
-                <div v-else class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="bg-gray-50 text-gray-500">
-                            <tr>
-                                <th class="p-3">ID (Key)</th>
-                                <th class="p-3">順序</th>
-                                <th class="p-3">姓名</th>
-                                <th class="p-3">區域</th>
-                                <th class="p-3">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="c in customersList" :key="c.id" class="border-b hover:bg-blue-50">
-                                <td class="p-3 font-mono text-xs text-gray-400">{{ c.id }}</td>
-                                <td class="p-3 font-bold">{{ c.order }}</td>
-                                <td class="p-3 font-bold text-blue-700">{{ c.name }}</td>
-                                <td class="p-3">{{ c.area }}</td>
-                                <td class="p-3">
-                                    <button @click="deleteItem(c.id)" class="bg-red-100 text-red-600 px-3 py-1 rounded text-xs hover:bg-red-200">刪除</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    <div v-if="customersList.length === 0 && !loading" class="text-center py-10 text-gray-400">
-                        <p>資料庫目前是空的，或是讀取權限被拒。</p>
-                        <p class="text-xs mt-2">請嘗試上方的「發送測試封包」按鈕。</p>
-                    </div>
-                </div>
-            </div>
-
-            <div v-if="view === 'delivery'" class="text-center py-10">
-                <h3 class="font-bold text-gray-500">配送員介面需等待資料庫連線成功後顯示資料</h3>
-            </div>
-
-        </main>
-    </div>
-
-    <script>
-        const { createApp, ref, computed, onMounted, reactive } = Vue;
-
-        createApp({
-            setup() {
-                const view = ref('manager');
-                const connectionStatus = ref('disconnected');
-                const lastPing = ref('');
-                const debugLogs = ref([]);
-                const customers = ref({});
-                const loading = ref(true);
-                const previewList = ref([]);
-                const form = reactive({ order: 1, name: '', area: '大埔', cycle: '每天', pattern: new Array(35).fill(0) });
-
-                // 紀錄 Log
-                const log = (msg) => {
-                    const time = new Date().toLocaleTimeString();
-                    debugLogs.value.unshift({ time, msg });
-                    console.log(`[App Log] ${msg}`);
-                };
-
-                // 監聽連線狀態
-                onMounted(() => {
-                    log("應用程式啟動，開始監聽資料庫...");
-                    
-                    // 1. 監聽 .info/connected (Firebase 內建連線狀態)
-                    const connectedRef = window.dbRef(window.db, ".info/connected");
-                    window.dbOnValue(connectedRef, (snap) => {
-                        if (snap.val() === true) {
-                            connectionStatus.value = 'connected';
-                            lastPing.value = `Ping: ${new Date().toLocaleTimeString()}`;
-                            log("🟢 Firebase 伺服器已連線 (Client Connected)");
-                        } else {
-                            connectionStatus.value = 'disconnected';
-                            log("🔴 與 Firebase 伺服器斷線 (Client Disconnected)");
-                        }
-                    });
-
-                    // 2. 監聽 customers 節點
-                    const custRef = window.dbRef(window.db, 'customers');
-                    window.dbOnValue(custRef, (snap) => {
-                        loading.value = false;
-                        const val = snap.val();
-                        if (val) {
-                            customers.value = val;
-                            log(`📖 成功讀取到 ${Object.keys(val).length} 筆客戶資料`);
-                        } else {
-                            customers.value = {};
-                            log("📖 讀取成功，但 'customers' 節點目前為空 (null)");
-                        }
-                    }, (error) => {
-                        loading.value = false;
-                        log(`❌ 讀取失敗 (Permission Denied?): ${error.message}`);
-                        alert(`讀取被拒絕！請檢查 Rules。\n錯誤代碼: ${error.code}`);
-                    });
+            if (isEditing) {
+                // 更新模式
+                const docRef = doc(db, dbCollection, currentEditId);
+                await updateDoc(docRef, {
+                    name: name,
+                    amount: amount,
+                    date: date,
+                    updatedAt: serverTimestamp()
                 });
-
-                const connectionStatusText = computed(() => {
-                    return connectionStatus.value === 'connected' ? '已連線 (Online)' : '斷線中 (Offline)';
+                showMessage("修改成功！", "success");
+            } else {
+                // 新增模式
+                await addDoc(collection(db, dbCollection), {
+                    name: name,
+                    amount: amount,
+                    date: date,
+                    createdAt: serverTimestamp()
                 });
-
-                // 強制寫入測試
-                const forceTestWrite = async () => {
-                    log("🚀 開始執行強制寫入測試...");
-                    const testRef = window.dbRef(window.db, '_debug_test_write_' + Date.now());
-                    try {
-                        await window.dbSet(testRef, {
-                            msg: "Hello Firebase",
-                            timestamp: Date.now()
-                        });
-                        log("✅ 寫入測試成功！資料庫權限正常。");
-                        alert("寫入測試成功！權限設定正確。");
-                        // 清理測試資料
-                        // window.dbRemove(testRef); 
-                    } catch (e) {
-                        log(`❌ 寫入測試失敗: ${e.code}`);
-                        log(`詳細錯誤: ${e.message}`);
-                        if (e.code === 'PERMISSION_DENIED') {
-                            alert("權限不足！請去 Firebase Console 把 Rules 改成 true。");
-                        } else {
-                            alert(`連線錯誤: ${e.message}\n請檢查 databaseURL 是否正確。`);
-                        }
-                    }
-                };
-
-                // 新增資料相關
-                const addToPreview = () => {
-                    if (!form.name) return alert("請輸入姓名");
-                    previewList.value.push({ ...form, pattern: [...form.pattern] });
-                    form.name = '';
-                    form.order++;
-                    log("已加入預覽清單");
-                };
-
-                const confirmRealUpload = async () => {
-                    if (previewList.value.length === 0) return;
-                    log(`準備上傳 ${previewList.value.length} 筆資料...`);
-                    
-                    const updates = {};
-                    previewList.value.forEach(item => {
-                        // 使用 cust_001 格式當 Key
-                        const key = `cust_${item.order.toString().padStart(3, '0')}`;
-                        updates[`customers/${key}`] = item;
-                    });
-
-                    try {
-                        await window.dbUpdate(window.dbRef(window.db), updates);
-                        log("✅ 批量寫入成功！");
-                        previewList.value = [];
-                    } catch (e) {
-                        log(`❌ 批量寫入失敗: ${e.message}`);
-                        alert("上傳失敗：" + e.message);
-                    }
-                };
-
-                const deleteItem = async (key) => {
-                    if (!confirm(`確定刪除 ID: ${key} 嗎？`)) return;
-                    try {
-                        await window.dbRemove(window.dbRef(window.db, `customers/${key}`));
-                        log(`🗑️ 已刪除 ${key}`);
-                    } catch (e) {
-                        log(`❌ 刪除失敗: ${e.message}`);
-                    }
-                };
-
-                const customersList = computed(() => {
-                    return Object.entries(customers.value).map(([key, val]) => ({
-                        id: key,
-                        ...val
-                    })).sort((a, b) => a.order - b.order);
-                });
-
-                const reloadPage = () => location.reload();
-
-                return {
-                    view, connectionStatus, lastPing, debugLogs, form, previewList,
-                    customersList, loading, connectionStatusText,
-                    forceTestWrite, addToPreview, confirmRealUpload, deleteItem, reloadPage
-                };
+                showMessage("新增成功！", "success");
             }
-        }).mount('#app');
-    </script>
+            resetForm();
+        } catch (e) {
+            console.error("Error: ", e);
+            showMessage("操作失敗，請檢查網路或權限", "error");
+        } finally {
+            submitBtn.disabled = false;
+        }
+    });
+
+    // 6. 刪除資料 (Delete)
+    async function handleDelete(e) {
+        if (!confirm("確定要刪除這筆紀錄嗎？")) return;
+        
+        const id = e.target.getAttribute('data-id');
+        try {
+            await deleteDoc(doc(db, dbCollection, id));
+            showMessage("刪除成功", "success");
+            // 如果正在編輯這筆被刪除的資料，強制重置
+            if (currentEditId === id) resetForm(); 
+        } catch (e) {
+            showMessage("刪除失敗", "error");
+        }
+    }
+
+    // 準備編輯資料 (將資料填回輸入框)
+    function handleEditSetup(e) {
+        const btn = e.target;
+        currentEditId = btn.getAttribute('data-id');
+        itemNameInput.value = btn.getAttribute('data-name');
+        itemAmountInput.value = btn.getAttribute('data-amount');
+        itemDateInput.value = btn.getAttribute('data-date');
+
+        isEditing = true;
+        submitBtn.textContent = "確認修改";
+        submitBtn.style.backgroundColor = "#ffc107"; // 黃色
+        cancelBtn.style.display = "block";
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // 捲動到上方
+    }
+
+    // 取消修改
+    cancelBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        resetForm();
+    });
+
+</script>
+
 </body>
 </html>

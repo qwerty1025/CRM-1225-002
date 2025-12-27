@@ -3,77 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase 雲端記帳本</title>
+    <title>專業版代購配送系統 V4</title>
     <style>
-        body { font-family: "Microsoft JhengHei", Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; padding: 20px; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
-        h2 { text-align: center; color: #333; }
+        /* --- 基礎樣式 --- */
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; height: 100vh; display: flex; overflow: hidden; }
         
-        /* 表單樣式 */
-        .input-group { margin-bottom: 10px; }
-        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button#submitBtn { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
-        button#submitBtn:hover { background-color: #218838; }
-        button#cancelBtn { width: 100%; padding: 10px; background-color: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 5px; display: none; }
+        /* 左側與右側佈局 */
+        .sidebar { width: 260px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; z-index: 10; }
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; background: #eef2f5; }
 
-        /* 列表樣式 */
-        ul { list-style: none; padding: 0; margin-top: 20px; }
-        li { background: #fff; border-bottom: 1px solid #eee; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
-        li:last-child { border-bottom: none; }
-        .item-info { display: flex; flex-direction: column; }
-        .item-name { font-weight: bold; font-size: 1.1em; }
-        .item-date { font-size: 0.8em; color: #888; }
-        .actions button { margin-left: 5px; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
-        .edit-btn { background-color: #ffc107; color: #333; }
-        .delete-btn { background-color: #dc3545; color: white; }
+        /* 左側列表 */
+        .search-box { padding: 15px; background: #fafafa; border-bottom: 1px solid #eee; }
+        .search-box input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .customer-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        .customer-item { padding: 12px 15px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .customer-item:hover { background-color: #f5faff; }
+        .customer-item.active { background-color: #e3f2fd; border-left: 4px solid #2196f3; }
+        .c-name { font-weight: bold; color: #333; }
+        .c-sub { font-size: 0.85em; color: #888; margin-top: 4px; }
+        .btn-add { width: 100%; padding: 12px; background: #2196f3; color: white; border: none; cursor: pointer; font-weight: bold; }
+
+        /* --- 右側面板與分頁 (Tabs) --- */
+        .edit-panel { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 0; max-width: 950px; margin: 0 auto; width: 100%; display: none; overflow: hidden; }
+        .edit-panel.active { display: block; animation: fadeIn 0.3s; }
+
+        /* 分頁標籤區 */
+        .tabs-header { display: flex; background: #f8f9fa; border-bottom: 1px solid #ddd; }
+        .tab-btn { flex: 1; padding: 15px; text-align: center; cursor: pointer; font-weight: bold; color: #666; border-right: 1px solid #eee; transition: 0.2s; }
+        .tab-btn:hover { background: #e9ecef; }
+        .tab-btn.active { background: white; color: #2196f3; border-bottom: 3px solid #2196f3; }
         
-        /* 提示訊息 */
-        #statusMsg { text-align: center; margin-top: 10px; height: 20px; font-size: 0.9em; }
-        .success { color: green; }
-        .error { color: red; }
+        /* 分頁內容區 */
+        .tab-content { padding: 25px; display: none; }
+        .tab-content.active { display: block; }
+
+        /* 表單元素 */
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-group { flex: 1; }
+        label { display: block; font-size: 0.9em; color: #666; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 9px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        
+        /* 模組按鈕群 */
+        .pattern-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 20px; }
+        .pt-btn { background: #e0f7fa; border: 1px solid #b2ebf2; color: #006064; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 0.9em; text-align: center; }
+        .pt-btn:hover { background: #b2ebf2; }
+
+        /* 每日設定列 (Day Row) */
+        .day-config-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
+        .day-chk { width: 20px; height: 20px; cursor: pointer; }
+        .day-name { width: 40px; font-weight: bold; color: #555; }
+        .day-inputs { flex: 1; display: flex; gap: 10px; opacity: 0.4; pointer-events: none; transition: 0.2s; }
+        /* 當 checkbox 被勾選時，後面的輸入框才亮起來 */
+        .day-chk:checked ~ .day-inputs { opacity: 1; pointer-events: auto; }
+
+        /* 假日設定開關 */
+        .holiday-toggle { background: #fff3e0; padding: 15px; border-radius: 6px; border: 1px solid #ffe0b2; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        
+        /* 日曆樣式 */
+        .calendar-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 800px) { .calendar-wrapper { grid-template-columns: 1fr; } }
+        .month-card { border: 1px solid #eee; border-radius: 6px; background: #fff; }
+        .month-header { background: #34495e; color: white; text-align: center; padding: 5px; font-weight: bold; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+        .d-cell { height: 36px; line-height: 1.2; font-size: 0.8em; border: 1px solid #f9f9f9; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        .d-cell.empty { background: #fdfdfd; }
+        
+        /* 狀態顏色 */
+        .d-cell.active { background-color: #dcedc8; color: #33691e; } /* 一般配送 */
+        .d-cell.holiday-mark { background-color: #ffebee; color: #c62828; } /* 假日(未送) */
+        .d-cell.active.holiday-mark { background-color: #ffccbc; color: #bf360c; border: 2px solid #ff5722; } /* 假日(有送) */
+        
+        .holiday-badge { font-size: 0.7em; color: red; display: block; transform: scale(0.8); }
+
+        /* 底部按鈕 */
+        .action-bar { padding: 20px; background: #f8f9fa; border-top: 1px solid #ddd; text-align: right; }
+        .btn-save { background: #27ae60; color: white; padding: 10px 30px; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; padding: 12px 24px; border-radius: 4px; display: none; z-index: 100; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>💰 雲端記帳本</h2>
-    
-    <div class="input-group">
-        <input type="text" id="itemName" placeholder="項目名稱 (例如: 午餐)" required>
+<div class="sidebar">
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="🔍 搜尋客戶...">
     </div>
-    <div class="input-group">
-        <input type="number" id="itemAmount" placeholder="金額" required>
-    </div>
-    <div class="input-group">
-        <input type="date" id="itemDate" required>
-    </div>
-    
-    <button id="submitBtn">新增紀錄</button>
-    <button id="cancelBtn">取消修改</button>
-    <div id="statusMsg"></div>
-
-    <ul id="expenseList">
-        <li style="justify-content:center; color:#888;">載入資料中...</li>
+    <ul class="customer-list" id="customerList">
+        <li style="padding:15px;text-align:center;color:#999;">載入中...</li>
     </ul>
+    <button class="btn-add" id="btnAddCustomer">+ 新增客戶檔案</button>
 </div>
 
-<script type="module">
-    // 1. 引入必要的 Firebase 函式庫
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-        getFirestore, 
-        collection, 
-        addDoc, 
-        onSnapshot, 
-        doc, 
-        deleteDoc, 
-        updateDoc,
-        query,
-        orderBy,
-        serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+<div class="main-content">
+    <div id="welcomeMsg" style="text-align:center; margin-top:100px; color:#999;">
+        <h3>👈 請選擇或新增客戶</h3>
+    </div>
 
-    // 2. 您的 Firebase 設定
+    <div class="edit-panel" id="editPanel">
+        <div class="tabs-header">
+            <div class="tab-btn active" onclick="switchTab('tab1')">1. 顧客基本資料</div>
+            <div class="tab-btn" onclick="switchTab('tab2')">2. 配送排程設定</div>
+            <div class="tab-btn" onclick="switchTab('tab3')">3. 長期日曆預覽</div>
+        </div>
+
+        <div id="tab1" class="tab-content active">
+            <h3 class="section-title">👤 客戶檔案</h3>
+            <div class="form-row">
+                <div class="form-group"><label>姓名</label><input type="text" id="inpName"></div>
+                <div class="form-group"><label>電話</label><input type="text" id="inpPhone"></div>
+            </div>
+            <div class="form-group"><label>配送地址</label><input type="text" id="inpAddress"></div>
+            <div class="form-group" style="margin-top:15px;"><label>備註事項</label><input type="text" id="inpNote" placeholder="例如: 管理室代收..."></div>
+            
+            <div style="margin-top:20px; text-align:right;">
+                <button onclick="switchTab('tab2')" style="padding:8px 20px; cursor:pointer;">下一步設定排程 👉</button>
+            </div>
+        </div>
+
+        <div id="tab2" class="tab-content">
+            <h3 class="section-title">⚡ 快速套用模組 (點擊即套用)</h3>
+            <div class="pattern-grid" id="patternGrid">
+                </div>
+
+            <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+            <div class="holiday-toggle">
+                <input type="checkbox" id="chkHolidayDeliver" style="width:20px; height:20px;">
+                <div>
+                    <div style="font-weight:bold; color:#d32f2f;">國定假日處理方式</div>
+                    <div style="font-size:0.9em; color:#555;">勾選代表「見紅不休 (持續配送)」，未勾選代表「見紅就休 (暫停配送)」</div>
+                </div>
+            </div>
+
+            <h3 class="section-title">📅 每日配送內容詳情</h3>
+            <div id="dailyConfigContainer">
+                </div>
+        </div>
+
+        <div id="tab3" class="tab-content">
+            <h3 class="section-title">📆 2025/06 - 2026/03 配送預覽</h3>
+            <div style="margin-bottom:10px; font-size:0.9em;">
+                <span style="display:inline-block; width:12px; height:12px; background:#dcedc8; border:1px solid #c5e1a5;"></span> 正常配送
+                <span style="display:inline-block; width:12px; height:12px; background:#ffebee; border:1px solid #ef9a9a; margin-left:10px;"></span> 國定假日(未送)
+                <span style="display:inline-block; width:12px; height:12px; background:#ffccbc; border:1px solid #ff5722; margin-left:10px;"></span> 假日加班送
+            </div>
+            <div id="calendarContainer" class="calendar-wrapper"></div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn-save" id="btnSave">確認並儲存至雲端</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast">儲存成功</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyALj-w6MSC_5CgGCVUVFveoV8-ykRxcu24",
         authDomain: "crm-1225-003.firebaseapp.com",
@@ -83,167 +173,277 @@
         appId: "1:566985177794:web:fcf21c033bd62c3bd7195b"
     };
 
-    // 3. 初始化 Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const dbCollection = "expenses"; // 資料庫集合名稱
+    const COL_CUSTOMERS = "customers_v4_expert"; 
 
-    // DOM 元素
-    const itemNameInput = document.getElementById('itemName');
-    const itemAmountInput = document.getElementById('itemAmount');
-    const itemDateInput = document.getElementById('itemDate');
-    const submitBtn = document.getElementById('submitBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const expenseList = document.getElementById('expenseList');
-    const statusMsg = document.getElementById('statusMsg');
+    // --- 資料常數 ---
+    const PRODUCT_OPTIONS = ["原味 1 瓶", "原味 2 瓶", "甜味 1 瓶", "巧克力 1 瓶", "草莓 1 瓶", "黑糖 1 瓶", "家庭號 1 組"];
+    
+    // 11 組快速模組定義 (days: 1=Mon, 0=Sun)
+    const QUICK_PATTERNS = [
+        { label: "每天配送", days: [1,2,3,4,5,6,0] },
+        { label: "平日 (一)～(五)", days: [1,2,3,4,5] },
+        { label: "週 (一)～(六)", days: [1,2,3,4,5,6] },
+        { label: "週 (二)～(日)", days: [2,3,4,5,6,0] },
+        { label: "週 (一)～(四)", days: [1,2,3,4] },
+        { label: "週 (六)～(日)", days: [6,0] },
+        { label: "間隔 (一,三,五)", days: [1,3,5] },
+        { label: "間隔 (二,四)", days: [2,4] },
+        { label: "週 (二)+(六)", days: [2,6] },
+        { label: "週 (六) 單日", days: [6] },
+        { label: "週 (日) 單日", days: [0] }
+    ];
 
-    // 設定預設日期為今天
-    itemDateInput.valueAsDate = new Date();
+    // 台灣國定假日 (2025-2026 簡易版)
+    const HOLIDAYS = {
+        "2025-6-3": "端午節",
+        "2025-10-6": "中秋節",
+        "2025-10-10": "國慶日",
+        "2026-1-1": "元旦",
+        "2026-2-17": "除夕",
+        "2026-2-18": "春節",
+        "2026-2-19": "春節",
+        "2026-2-20": "春節",
+        "2026-2-28": "228"
+    };
 
-    // 變數：用來記錄現在是否正在「編輯模式」以及正在編輯哪一筆 ID
-    let isEditing = false;
-    let currentEditId = null;
+    // --- UI 與 邏輯 ---
+    let currentCustomerId = null;
+    
+    // 生成模組按鈕
+    const patternBox = document.getElementById('patternGrid');
+    QUICK_PATTERNS.forEach(p => {
+        const btn = document.createElement('div');
+        btn.className = 'pt-btn';
+        btn.textContent = p.label;
+        btn.onclick = () => applyPattern(p.days);
+        patternBox.appendChild(btn);
+    });
+
+    // 生成每日設定列 (Mon-Sun)
+    const dailyBox = document.getElementById('dailyConfigContainer');
+    const WEEK_DAYS = [
+        {val: 1, txt: "週一"}, {val: 2, txt: "週二"}, {val: 3, txt: "週三"}, 
+        {val: 4, txt: "週四"}, {val: 5, txt: "週五"}, {val: 6, txt: "週六", color:"red"}, {val: 0, txt: "週日", color:"red"}
+    ];
+    
+    WEEK_DAYS.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'day-config-row';
+        
+        let opts = PRODUCT_OPTIONS.map(o => `<option value="${o}">${o}</option>`).join('');
+        
+        row.innerHTML = `
+            <input type="checkbox" class="day-chk" data-day="${d.val}">
+            <div class="day-name" style="color:${d.color||'inherit'}">${d.txt}</div>
+            <div class="day-inputs">
+                <select class="d-prod">${opts}</select>
+                <input type="number" class="d-qty" value="1" min="1" style="width:60px;">
+            </div>
+        `;
+        dailyBox.appendChild(row);
+        
+        // 綁定變更事件以即時更新日曆
+        row.querySelector('.day-chk').addEventListener('change', renderCalendar);
+        row.querySelector('.d-prod').addEventListener('change', renderCalendar);
+    });
+
+    // --- Firebase 監聽與操作 ---
+    
+    onSnapshot(query(collection(db, COL_CUSTOMERS), orderBy("updatedAt", "desc")), (snapshot) => {
+        const list = document.getElementById('customerList');
+        list.innerHTML = "";
+        snapshot.forEach(doc => {
+            const c = doc.data();
+            const li = document.createElement('li');
+            li.className = `customer-item ${doc.id === currentCustomerId ? 'active' : ''}`;
+            li.innerHTML = `<div class="c-name">${c.name}</div><div class="c-sub">${c.phone || '-'}</div>`;
+            li.onclick = () => loadCustomer(doc.id, c);
+            list.appendChild(li);
+        });
+    });
+
+    function loadCustomer(id, data) {
+        currentCustomerId = id;
+        document.getElementById('welcomeMsg').style.display = 'none';
+        document.getElementById('editPanel').classList.add('active');
+        
+        // 填入基本資料
+        document.getElementById('inpName').value = data.name || "";
+        document.getElementById('inpPhone').value = data.phone || "";
+        document.getElementById('inpAddress').value = data.address || "";
+        document.getElementById('inpNote').value = data.note || "";
+        document.getElementById('chkHolidayDeliver').checked = data.deliverOnHoliday || false;
+
+        // 填入排程 (Schedule)
+        // data.schedule 格式: { "1": {prod: "原味", qty: 1}, "4": {...} }
+        const schedule = data.schedule || {};
+        document.querySelectorAll('.day-config-row').forEach(row => {
+            const chk = row.querySelector('.day-chk');
+            const dayVal = chk.dataset.day;
+            const config = schedule[dayVal];
+
+            if (config) {
+                chk.checked = true;
+                row.querySelector('.d-prod').value = config.prod;
+                row.querySelector('.d-qty').value = config.qty;
+            } else {
+                chk.checked = false;
+            }
+        });
+
+        renderCalendar();
+        switchTab('tab1'); // 預設回到第一頁
+    }
 
     // --- 功能函式 ---
 
-    // 顯示提示訊息
-    function showMessage(msg, type) {
-        statusMsg.textContent = msg;
-        statusMsg.className = type;
-        setTimeout(() => {
-            statusMsg.textContent = "";
-            statusMsg.className = "";
-        }, 3000);
-    }
-
-    // 重置表單
-    function resetForm() {
-        itemNameInput.value = '';
-        itemAmountInput.value = '';
-        itemDateInput.valueAsDate = new Date();
-        isEditing = false;
-        currentEditId = null;
-        submitBtn.textContent = "新增紀錄";
-        submitBtn.style.backgroundColor = "#28a745";
-        cancelBtn.style.display = "none";
-    }
-
-    // 4. 監聽資料庫變化 (Read) - 即時更新列表
-    const q = query(collection(db, dbCollection), orderBy("date", "desc"));
-    
-    onSnapshot(q, (snapshot) => {
-        expenseList.innerHTML = ""; // 清空列表
-        if (snapshot.empty) {
-            expenseList.innerHTML = `<li style="justify-content:center; color:#888;">目前沒有紀錄</li>`;
-            return;
-        }
-
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div class="item-info">
-                    <span class="item-name">${data.name}</span>
-                    <span class="item-date">${data.date}</span>
-                </div>
-                <div style="font-weight:bold; margin-right:15px;">$${data.amount}</div>
-                <div class="actions">
-                    <button class="edit-btn" data-id="${doc.id}" data-name="${data.name}" data-amount="${data.amount}" data-date="${data.date}">編輯</button>
-                    <button class="delete-btn" data-id="${doc.id}">刪除</button>
-                </div>
-            `;
-            expenseList.appendChild(li);
+    // 1. 套用模組 (只勾選對應的天數，不覆蓋口味)
+    window.applyPattern = function(daysArray) {
+        document.querySelectorAll('.day-config-row').forEach(row => {
+            const chk = row.querySelector('.day-chk');
+            const dayVal = parseInt(chk.dataset.day);
+            chk.checked = daysArray.includes(dayVal);
         });
+        renderCalendar();
+        showToast("模組已套用，請確認口味");
+    };
 
-        // 綁定按鈕事件 (因為是動態生成的，所以要在生成後綁定)
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', handleDelete);
-        });
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', handleEditSetup);
-        });
-    });
-
-    // 5. 新增或更新資料 (Create / Update)
-    submitBtn.addEventListener('click', async () => {
-        const name = itemNameInput.value.trim();
-        const amount = Number(itemAmountInput.value);
-        const date = itemDateInput.value;
-
-        if (!name || !amount || !date) {
-            showMessage("請填寫完整資訊！", "error");
-            return;
-        }
-
-        submitBtn.disabled = true;
-
-        try {
-            if (isEditing) {
-                // 更新模式
-                const docRef = doc(db, dbCollection, currentEditId);
-                await updateDoc(docRef, {
-                    name: name,
-                    amount: amount,
-                    date: date,
-                    updatedAt: serverTimestamp()
-                });
-                showMessage("修改成功！", "success");
-            } else {
-                // 新增模式
-                await addDoc(collection(db, dbCollection), {
-                    name: name,
-                    amount: amount,
-                    date: date,
-                    createdAt: serverTimestamp()
-                });
-                showMessage("新增成功！", "success");
+    // 2. 渲染日曆
+    function renderCalendar() {
+        const container = document.getElementById('calendarContainer');
+        container.innerHTML = "";
+        
+        // 收集目前的排程設定
+        const scheduleMap = {};
+        document.querySelectorAll('.day-config-row').forEach(row => {
+            const chk = row.querySelector('.day-chk');
+            if (chk.checked) {
+                scheduleMap[chk.dataset.day] = {
+                    prod: row.querySelector('.d-prod').value,
+                    qty: row.querySelector('.d-qty').value
+                };
             }
-            resetForm();
-        } catch (e) {
-            console.error("Error: ", e);
-            showMessage("操作失敗，請檢查網路或權限", "error");
-        } finally {
-            submitBtn.disabled = false;
-        }
-    });
+        });
 
-    // 6. 刪除資料 (Delete)
-    async function handleDelete(e) {
-        if (!confirm("確定要刪除這筆紀錄嗎？")) return;
-        
-        const id = e.target.getAttribute('data-id');
-        try {
-            await deleteDoc(doc(db, dbCollection, id));
-            showMessage("刪除成功", "success");
-            // 如果正在編輯這筆被刪除的資料，強制重置
-            if (currentEditId === id) resetForm(); 
-        } catch (e) {
-            showMessage("刪除失敗", "error");
+        const deliverOnHoliday = document.getElementById('chkHolidayDeliver').checked;
+
+        // 產生 10 個月
+        for (let i = 0; i < 10; i++) {
+            const d = new Date(2025, 5 + i, 1); // 從 2025/06 開始
+            const year = d.getFullYear();
+            const month = d.getMonth();
+            
+            const card = document.createElement('div');
+            card.className = 'month-card';
+            card.innerHTML = `<div class="month-header">${year} / ${month+1}</div>`;
+            
+            const grid = document.createElement('div');
+            grid.className = 'days-grid';
+            ["日","一","二","三","四","五","六"].forEach(h => grid.innerHTML += `<div style="background:#f0f0f0;font-size:0.8em;">${h}</div>`);
+
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDay = new Date(year, month, 1).getDay();
+
+            for(let k=0; k<firstDay; k++) grid.innerHTML += `<div class="d-cell empty"></div>`;
+
+            for(let day=1; day<=daysInMonth; day++) {
+                const dateKey = `${year}-${month+1}-${day}`;
+                const dayOfWeek = new Date(year, month, day).getDay();
+                const holidayName = HOLIDAYS[dateKey];
+                const config = scheduleMap[dayOfWeek];
+
+                const cell = document.createElement('div');
+                cell.className = 'd-cell';
+                let content = `<div>${day}</div>`;
+
+                // 判斷配送狀態
+                if (config) {
+                    // 原本今天要送
+                    if (holidayName) {
+                        // 遇到假日
+                        content += `<span class="holiday-badge">${holidayName}</span>`;
+                        if (deliverOnHoliday) {
+                            cell.classList.add('active', 'holiday-mark'); // 假日加班
+                            content += `<div style="font-size:0.7em;">${config.prod.substr(0,2)}x${config.qty}</div>`;
+                        } else {
+                            cell.classList.add('holiday-mark'); // 假日休假
+                            content += `<div style="font-size:0.7em;text-decoration:line-through;opacity:0.5;">暫停</div>`;
+                        }
+                    } else {
+                        // 普通日
+                        cell.classList.add('active');
+                        content += `<div style="font-size:0.7em;">${config.prod.substr(0,2)}x${config.qty}</div>`;
+                    }
+                } else if (holidayName) {
+                    // 原本沒送，但剛好是假日
+                    cell.classList.add('holiday-mark');
+                    content += `<span class="holiday-badge">${holidayName}</span>`;
+                }
+
+                cell.innerHTML = content;
+                grid.appendChild(cell);
+            }
+            card.appendChild(grid);
+            container.appendChild(card);
         }
     }
 
-    // 準備編輯資料 (將資料填回輸入框)
-    function handleEditSetup(e) {
-        const btn = e.target;
-        currentEditId = btn.getAttribute('data-id');
-        itemNameInput.value = btn.getAttribute('data-name');
-        itemAmountInput.value = btn.getAttribute('data-amount');
-        itemDateInput.value = btn.getAttribute('data-date');
+    // 3. 儲存
+    document.getElementById('btnSave').onclick = async () => {
+        if (!currentCustomerId) return;
+        const btn = document.getElementById('btnSave');
+        btn.textContent = "儲存中...";
 
-        isEditing = true;
-        submitBtn.textContent = "確認修改";
-        submitBtn.style.backgroundColor = "#ffc107"; // 黃色
-        cancelBtn.style.display = "block";
-        
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // 捲動到上方
+        // 收集排程
+        const scheduleData = {};
+        document.querySelectorAll('.day-config-row').forEach(row => {
+            const chk = row.querySelector('.day-chk');
+            if (chk.checked) {
+                scheduleData[chk.dataset.day] = {
+                    prod: row.querySelector('.d-prod').value,
+                    qty: parseInt(row.querySelector('.d-qty').value)
+                };
+            }
+        });
+
+        const payload = {
+            name: document.getElementById('inpName').value,
+            phone: document.getElementById('inpPhone').value,
+            address: document.getElementById('inpAddress').value,
+            note: document.getElementById('inpNote').value,
+            deliverOnHoliday: document.getElementById('chkHolidayDeliver').checked,
+            schedule: scheduleData,
+            updatedAt: serverTimestamp()
+        };
+
+        await updateDoc(doc(db, COL_CUSTOMERS, currentCustomerId), payload);
+        showToast("資料已更新！");
+        btn.textContent = "確認並儲存至雲端";
+    };
+
+    document.getElementById('btnAddCustomer').onclick = async () => {
+        const name = prompt("輸入新客戶姓名:");
+        if (name) await addDoc(collection(db, COL_CUSTOMERS), { name, updatedAt: serverTimestamp() });
+    };
+
+    window.switchTab = function(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        event.target.classList.add('active');
+    };
+
+    window.showToast = function(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.style.display = 'block';
+        setTimeout(()=>t.style.display='none', 3000);
     }
-
-    // 取消修改
-    cancelBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        resetForm();
-    });
-
+    
+    // 監聽 Checkbox (Holiday Toggle)
+    document.getElementById('chkHolidayDeliver').addEventListener('change', renderCalendar);
 </script>
 
 </body>

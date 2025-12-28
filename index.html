@@ -3,194 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>羊奶中控系統 V10 (批次匯入版)</title>
+    <title>羊奶中控系統 V16.2 (ERP 完整版)</title>
     <style>
         :root {
-            --sidebar-width: 240px;
-            --sidebar-collapsed: 60px;
+            --sidebar-width: 260px;
             --primary: #2c3e50;
-            --accent: #2980b9;
+            --accent: #8e44ad; /* 紫色系 */
             --bg: #f0f2f5;
-            --border: #ddd;
+            --border: #e0e0e0;
+            --group-bg: #f3e5f5;
+            --success: #27ae60;
+            --danger: #c0392b;
+            --warning: #f39c12;
         }
-        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; overflow: hidden; }
+        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* 左側欄 */
+        /* --- Hub Navigation (Top Bar) --- */
+        .hub-nav {
+            background: var(--primary); color: white; padding: 0 20px; height: 50px;
+            display: flex; align-items: center; gap: 20px; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .hub-title { font-weight: bold; font-size: 1.1rem; margin-right: 20px; letter-spacing: 1px; }
+        .hub-btn {
+            background: transparent; border: none; color: #b0bec5; padding: 0 15px; height: 50px;
+            cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: all 0.2s; border-bottom: 3px solid transparent;
+        }
+        .hub-btn:hover { color: white; background: rgba(255,255,255,0.1); }
+        .hub-btn.active { color: white; border-bottom: 3px solid var(--accent); background: rgba(0,0,0,0.2); }
+
+        /* --- Layout Container --- */
+        .app-container { flex: 1; display: flex; overflow: hidden; position: relative; }
+        
+        /* Views */
+        .view-section { display: none; width: 100%; height: 100%; overflow: hidden; }
+        .view-section.active { display: flex; }
+
+        /* --- View A: Operations (V15 Layout) --- */
         .sidebar {
             width: var(--sidebar-width); background: white; border-right: 1px solid var(--border);
             display: flex; flex-direction: column; transition: width 0.3s ease; flex-shrink: 0; z-index: 10;
         }
-        .sidebar.collapsed { width: var(--sidebar-collapsed); }
-        .sidebar.collapsed .sb-text, .sidebar.collapsed .search-box, .sidebar.collapsed .c-info, .sidebar.collapsed .btn-label { display: none; }
-        .sidebar.collapsed .c-avatar { display: block; margin: 0 auto; }
-        
-        .sb-header { padding: 12px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
-        .toggle-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
-        .search-box { padding: 10px; border-bottom: 1px solid #eee; }
-        .search-box input { width: 100%; padding: 6px; box-sizing: border-box; }
+        .sidebar.collapsed { width: 50px; }
         
         .c-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        .c-item { padding: 10px 15px; border-bottom: 1px solid #f9f9f9; cursor: pointer; display: flex; align-items: center; height: 45px; }
-        .c-item:hover { background: #e3f2fd; }
-        .c-item.active { background: #bbdefb; border-left: 4px solid var(--accent); }
-        .c-avatar { display: none; width: 32px; height: 32px; background: #eee; border-radius: 50%; text-align: center; line-height: 32px; color: #555; font-weight: bold; }
+        .addr-header { background: var(--group-bg); color: #4a148c; padding: 4px 10px; font-size: 0.75rem; font-weight: bold; position: sticky; top: 0; border-bottom: 1px solid #e1bee7; }
+        .c-item { padding: 8px 10px 8px 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed #f5f5f5; font-size: 0.8rem; }
+        .c-item:hover { background: #f3e5f5; }
+        .c-item.active { background: #e1bee7; border-left: 4px solid var(--accent); font-weight: bold; }
+        .c-item.suspended { text-decoration: line-through; color: #999; background: #eee; }
 
-        /* 側邊欄底部按鈕區 */
-        .sb-footer { padding: 10px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 5px; }
-        .sb-btn { 
-            width: 100%; padding: 8px; border: none; font-weight: bold; cursor: pointer; 
-            border-radius: 4px; text-align: left; display: flex; align-items: center; gap: 8px;
-        }
-        .btn-add { background: #e3f2fd; color: #1565c0; }
-        .btn-import { background: #e8f5e9; color: #2e7d32; }
-        .btn-import:hover { background: #c8e6c9; }
-
-        /* 主內容 */
-        .main { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; position: relative; }
+        .workspace { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
         
-        .header-bar { background: white; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .header-left { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
-        .btn-clone { background: #ff9800; color: white; border: none; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
-
-        .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; }
-
-        /* 矩陣設定 */
-        .config-card { background: white; border-radius: 6px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
-        .matrix-table th { background: #fafafa; padding: 6px; border: 1px solid #eee; color: #666; }
-        .matrix-table td { border: 1px solid #eee; padding: 4px; text-align: center; }
+        /* Header & Inputs */
+        .header-container { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; }
+        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        input, select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+        .sector-select { background: #f3e5f5; color: #4a148c; font-weight: bold; }
         
-        .t-btn { 
-            display: inline-block; width: 26px; height: 26px; line-height: 26px; 
-            border: 1px solid #e0e0e0; border-radius: 4px; cursor: pointer; margin: 0 2px; 
-            color: #bbb; background: white; font-size: 0.85rem; user-select: none;
-        }
-        .t-btn.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: bold; }
+        /* Billing Accordion */
+        .billing-accordion { border: 1px solid #ddd; border-radius: 6px; overflow: hidden; background: white; margin-bottom: 5px; }
+        .billing-summary { background: #f8f9fa; padding: 10px; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .billing-content { padding: 15px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 10px; }
+        .bill-stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
 
-        .pt-row { display: flex; gap: 5px; flex-wrap: wrap; }
-        .pt-btn { font-size: 0.75rem; padding: 4px 10px; background: #e0f2f1; color: #00695c; border-radius: 12px; cursor: pointer; border: 1px solid #b2dfdb; }
-
-        /* 日曆 */
+        /* Calendar Matrix */
         .cal-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
         .cal-card { background: white; border-radius: 6px; padding: 8px; border-top: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .cal-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid #eee; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-        .cal-head { font-size: 0.75rem; text-align: center; color: #aaa; }
-        .cal-cell { aspect-ratio: 1; border: 1px solid #f5f5f5; position: relative; cursor: pointer; border-radius: 3px; }
-        .date-num { position: absolute; top: 2px; left: 3px; font-size: 0.7rem; color: #666; font-weight: bold; }
-        .content-badge {
-            position: absolute; bottom: 2px; right: 2px; left: 2px;
-            background: rgba(255,255,255,0.9); border: 1px solid #ddd;
-            border-radius: 3px; font-size: 0.75rem; text-align: center;
-            color: #333; font-weight: bold; padding: 1px 0;
-        }
-        
-        .st-normal { background: #c8e6c9; }
-        .st-paused { background: #ffcdd2; }
-        .st-missed { background: #fff9c4; border: 1px solid #fbc02d; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 5px; }
+        .cal-cell { aspect-ratio: 1; border: 1px solid #f5f5f5; position: relative; cursor: pointer; border-radius: 3px; font-size: 0.7rem; }
+        .st-normal { background: #d1c4e9; }
         .st-holiday { background: #f5f5f5; }
-        .st-paused .content-badge { text-decoration: line-through; color: #c62828; opacity: 0.7; }
+        .st-paused { background: #ffcdd2; }
+        .content-badge { position: absolute; bottom: 1px; right: 1px; left: 1px; background: rgba(255,255,255,0.9); font-size: 0.6rem; text-align: center; border: 1px solid #ddd; }
+        .suspend-overlay { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.7); font-weight: bold; color: #c0392b; transform: rotate(-15deg); pointer-events: none; }
 
-        /* 浮動按鈕 */
-        .fab-group { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; align-items: end; }
-        .fab-btn { 
-            padding: 12px 20px; border-radius: 30px; border: none; color: white; 
-            font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); 
-            display: flex; align-items: center; gap: 5px; transition: transform 0.1s;
-        }
-        .fab-btn:active { transform: scale(0.95); }
-        .btn-save { background: #4caf50; }
-        .btn-save-exit { background: #2c3e50; }
+        /* --- View B: Finance --- */
+        .finance-layout { padding: 20px; display: flex; gap: 20px; height: 100%; box-sizing: border-box; }
+        .finance-panel { flex: 1; background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .log-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .log-table th { text-align: left; background: #f1f2f6; padding: 8px; position: sticky; top: 0; }
+        .log-table td { border-bottom: 1px solid #eee; padding: 8px; }
+        
+        /* --- View C: Production --- */
+        .prod-layout { padding: 20px; display: flex; flex-direction: column; gap: 20px; height: 100%; overflow-y: auto; box-sizing: border-box; }
+        .harvest-controls { display: flex; gap: 15px; background: white; padding: 15px; border-radius: 8px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .prod-matrix { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: white; }
+        .prod-matrix th, .prod-matrix td { border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; }
+        .prod-matrix th { background: #2c3e50; color: white; }
+        .gap-pos { color: var(--success); font-weight: bold; }
+        .gap-neg { color: var(--danger); font-weight: bold; }
+        .flavor-detail { font-size: 0.75rem; color: #666; display: block; margin-top: 4px; line-height: 1.2; }
 
-        /* 匯入遮罩 */
-        #importModal {
-            position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); 
-            display:none; justify-content:center; align-items:center; z-index:100;
-        }
-        .modal-box { background:white; padding:20px; border-radius:8px; text-align:center; width:300px; }
+        /* --- View D: Settings --- */
+        .settings-layout { padding: 20px; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+        .setting-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .prod-list-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
+
+        /* Buttons & Footer */
+        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: white; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-primary { background: var(--primary); }
+        .btn-accent { background: var(--accent); }
+        .btn-danger { background: var(--danger); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+        
+        .sb-footer { padding: 10px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 5px; background: #fff; margin-top: auto; }
+        .btn-io { width: 100%; background: #ecf0f1; color: #555; font-size: 0.75rem; justify-content: center; }
+        .btn-io:hover { background: #d0d3d4; }
+        
+        /* Float Button */
+        .fab { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; z-index: 100; }
+
+        /* Import Modal */
+        #loadingModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; }
+        .loading-box { background: white; padding: 20px; border-radius: 8px; text-align: center; width: 300px; }
 
     </style>
 </head>
 <body>
 
-<nav class="sidebar" id="sidebar">
-    <div class="sb-header">
-        <span class="sb-text">🐐 客戶列表</span>
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-    </div>
-    <div class="search-box">
-        <input type="text" id="searchInput" placeholder="搜尋姓名/電話...">
-    </div>
-    <ul class="c-list" id="customerList">
-        <li style="padding:15px; text-align:center; color:#999; font-size:0.8rem;">載入中...</li>
-    </ul>
-    <div class="sb-footer">
-        <button class="sb-btn btn-add" onclick="resetForm(true)">
-            <span>+</span> <span class="btn-label">新增空白客戶</span>
-        </button>
-        <button class="sb-btn btn-import" onclick="document.getElementById('csvInput').click()">
-            <span>📂</span> <span class="btn-label">匯入舊資料 (CSV)</span>
-        </button>
-        <input type="file" id="csvInput" accept=".csv" style="display:none">
-    </div>
+<nav class="hub-nav">
+    <div class="hub-title">🐐 羊奶中控 V16.2</div>
+    <button class="hub-btn active" onclick="switchView('ops')">📦 營運與配送</button>
+    <button class="hub-btn" onclick="switchView('finance')">💰 財務與日誌</button>
+    <button class="hub-btn" onclick="switchView('prod')">🥛 產能與庫存</button>
+    <button class="hub-btn" onclick="switchView('settings')">⚙️ 設定與產品</button>
 </nav>
 
-<main class="main">
-    <div id="emptyState" class="empty-state">
-        <h2>👋 歡迎使用 V10</h2>
-        <p>請從左側選擇客戶，或匯入資料。</p>
-        <p style="font-size:0.8rem; color:#bbb;">資料已清空，安全無虞</p>
+<div class="app-container">
+
+    <div id="view-ops" class="view-section active">
+        <aside class="sidebar" id="sidebar">
+            <div style="padding:10px; border-bottom:1px solid #eee; display:flex;">
+                <input type="text" id="searchInput" placeholder="搜尋姓名/地址..." style="width:100%" oninput="filterList()">
+            </div>
+            <ul class="c-list" id="customerList">
+                <li style="padding:15px; text-align:center; color:#999;">載入中...</li>
+            </ul>
+            <div class="sb-footer">
+                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="resetForm(true)">+ 新增客戶</button>
+                <div style="display:flex; gap:5px;">
+                    <button class="btn btn-io" onclick="document.getElementById('csvInput').click()">📂 匯入</button>
+                    <button class="btn btn-io" onclick="exportCSV()">💾 匯出</button>
+                </div>
+                <input type="file" id="csvInput" accept=".csv" style="display:none">
+            </div>
+        </aside>
+        
+        <main class="workspace">
+            <div id="emptyState" style="text-align:center; color:#999; margin-top:100px;">
+                <h3>👋 請選擇左側客戶進行編輯</h3>
+            </div>
+
+            <div id="opsWorkspace" style="display:none; flex-direction:column; gap:15px;">
+                <div class="header-container">
+                    <div class="row">
+                        <select id="inpSector" class="sector-select" style="width:100px"></select>
+                        <input id="inpName" placeholder="姓名" style="width:100px; font-weight:bold;">
+                        <input id="inpPhone" placeholder="電話" style="width:120px;">
+                        <input id="inpAddr" placeholder="地址" style="flex:1;">
+                        <input id="inpPrice" type="number" placeholder="$" style="width:50px;" title="單價">
+                        <button class="btn btn-danger" onclick="deleteCustomer()">🗑️</button>
+                    </div>
+                    <div class="row" style="background:#f8f9fa; padding:8px; border-radius:4px;">
+                        <span style="font-size:0.8rem; color:#666;">備註A:</span> <input id="inpNoteA" style="flex:1;">
+                        <span style="font-size:0.8rem; color:#666;">備註B:</span> <input id="inpNoteB" style="flex:1;">
+                        <label style="margin-left:10px; font-size:0.9rem; color:red; font-weight:bold;">
+                            <input type="checkbox" id="chkSuspended"> 暫停訂購
+                        </label>
+                    </div>
+                </div>
+
+                <details class="billing-accordion">
+                    <summary class="billing-summary">
+                        <span>💳 帳務與收款管理</span>
+                        <span style="font-size:0.8rem; color:#666;">點擊展開</span>
+                    </summary>
+                    <div class="billing-content">
+                        <div class="row">
+                            <input type="month" id="billMonth" onchange="calcBill()">
+                            <button class="btn btn-warning" onclick="calcBill(true)">🔄 重新計算</button>
+                        </div>
+                        <div id="billResult">
+                            <div class="bill-stat-row"><span>應送總瓶數:</span> <b id="b_qty">0</b></div>
+                            <div class="bill-stat-row"><span>應收金額:</span> <b id="b_amt" style="color:var(--accent)">$0</b></div>
+                        </div>
+                        <div class="row" style="border-top:1px dashed #ddd; padding-top:10px;">
+                            <input type="number" id="payAmount" placeholder="收款金額" style="width:100px;">
+                            <input type="text" id="payNote" placeholder="備註 (例: 現金/轉帳)" style="flex:1;">
+                            <button class="btn btn-success" onclick="addPayment()">✅ 確認收款</button>
+                        </div>
+                        <div style="font-size:0.75rem; color:#999; margin-top:5px;">* 收款操作將寫入系統流水帳</div>
+                    </div>
+                </details>
+
+                <div class="header-container">
+                    <div class="row" style="justify-content:space-between;">
+                        <div id="patternBox" class="row"></div>
+                        <label><input type="checkbox" id="chkHoliday"> 見紅不休</label>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; text-align:center; font-size:0.85rem; margin-top:5px;">
+                        <thead><tr style="background:#eee;"><th></th><th>原</th><th>甜</th><th>巧</th><th>草</th><th>黑</th></tr></thead>
+                        <tbody id="matrixBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="cal-wrapper" id="calendarGrid"></div>
+                <div style="height:50px;"></div>
+            </div>
+            
+            <div class="fab" id="fabSave" style="display:none;" onclick="saveData()">💾</div>
+        </main>
     </div>
 
-    <div id="workspace" style="display:none; flex-direction:column; gap:15px;">
-        <div class="header-bar">
-            <div class="header-left">
-                <input type="text" id="inpName" placeholder="客戶姓名" style="font-size:1.1rem; font-weight:bold; width:100px; border:none; border-bottom:1px solid #ccc;">
-                <input type="text" id="inpPhone" placeholder="電話" style="width:120px; border:1px solid #eee; padding:3px;">
-                <input type="text" id="inpAddr" placeholder="地址" style="flex:1; border:1px solid #eee; padding:3px; min-width: 150px;">
-                <label style="font-size:0.85rem;">$ <input type="number" id="inpPrice" value="35" style="width:40px;"></label>
+    <div id="view-finance" class="view-section">
+        <div class="finance-layout">
+            <div class="finance-panel">
+                <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                    <h3>💸 財務流水帳 (依登入時間)</h3>
+                    <button class="btn btn-primary" onclick="loadFinanceLogs()">🔄 刷新</button>
+                </div>
+                <div style="flex:1; overflow-y:auto;">
+                    <table class="log-table">
+                        <thead><tr><th>時間</th><th>客戶</th><th>月份</th><th>金額</th><th>備註</th><th>經手人</th></tr></thead>
+                        <tbody id="financeLogBody"></tbody>
+                    </table>
+                </div>
             </div>
-            <button class="btn-clone" onclick="cloneCustomer()">📑 複製此單</button>
-        </div>
-
-        <div class="config-card">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <div class="pt-row" id="patternBox"></div>
-                <label style="font-size:0.85rem;"><input type="checkbox" id="chkHoliday"> 見紅不休</label>
+            <div class="finance-panel">
+                <h3>🛡️ 系統操作日誌 (回朔)</h3>
+                <div style="flex:1; overflow-y:auto; margin-top:10px;">
+                    <ul id="auditLogList" style="list-style:none; padding:0; font-size:0.85rem; color:#555;"></ul>
+                </div>
             </div>
-            <table class="matrix-table">
-                <thead>
-                    <tr><th style="width:40px;"></th><th>原味 (1,2,4,6)</th><th>甜味 (1,2)</th><th>巧克力 (1,2)</th><th>草莓 (1,2)</th><th>黑糖 (1,2)</th></tr>
-                </thead>
-                <tbody id="matrixBody"></tbody>
-            </table>
         </div>
-
-        <div class="cal-wrapper" id="calendarGrid"></div>
-        <div style="height:60px;"></div>
     </div>
-</main>
 
-<div class="fab-group" id="fabGroup" style="display:none;">
-    <button class="fab-btn btn-save" onclick="saveData(false)">💾 僅儲存</button>
-    <button class="fab-btn btn-save-exit" onclick="saveData(true)">💾 儲存並結束</button>
+    <div id="view-prod" class="view-section">
+        <div class="prod-layout">
+            <div class="harvest-controls">
+                <h3>🌾 採收與供需比對</h3>
+                <input type="date" id="harvestDate">
+                <input type="number" id="harvestWeight" placeholder="採收公斤數 (kg)" style="width:120px;">
+                <input type="text" id="harvestNote" placeholder="備註 (例:早班)" style="width:150px;">
+                <button class="btn btn-success" onclick="saveHarvest()">➕ 登記採收</button>
+                <span style="flex:1;"></span>
+                <button class="btn btn-accent" onclick="calcForecast()">📊 計算未來兩週預測</button>
+            </div>
+
+            <div style="flex:1; overflow:auto;">
+                <table class="prod-matrix">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>訂單總瓶數 / 明細</th>
+                            <th>預估需求 (kg)</th>
+                            <th>實際採收 (kg)</th>
+                            <th>結餘 (Gap)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="forecastBody">
+                        <tr><td colspan="5" style="padding:20px; color:#999;">請點擊「計算未來兩週預測」</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="font-size:0.8rem; color:#666; padding:0 20px;">* 需求重量依據「設定」頁面中的產品單瓶重量計算。</div>
+        </div>
+    </div>
+
+    <div id="view-settings" class="view-section">
+        <div class="settings-layout">
+            <div class="setting-card">
+                <h3>🥛 產品項目與重量設定</h3>
+                <div class="row" style="margin-bottom:10px;">
+                    <input id="prodName" placeholder="產品名 (如:原味)" style="width:120px;">
+                    <input id="prodWeight" type="number" placeholder="單瓶重量(g)" style="width:100px;">
+                    <input id="prodPrice" type="number" placeholder="預設單價" style="width:80px;">
+                    <button class="btn btn-primary" onclick="addProduct()">新增/更新</button>
+                </div>
+                <div id="productList"></div>
+            </div>
+
+            <div class="setting-card">
+                <h3>📅 全域日程控管 (颱風/假日)</h3>
+                <div class="row" style="margin-bottom:10px;">
+                    <input type="date" id="globalDate">
+                    <select id="globalType">
+                        <option value="typhoon">🌪️ 颱風/緊急停送 (扣款)</option>
+                        <option value="holiday">🔴 國定假日 (依見紅不休)</option>
+                    </select>
+                    <button class="btn btn-danger" onclick="addGlobalEvent()">設定</button>
+                </div>
+                <ul id="globalEventList" style="padding-left:20px; color:#555;"></ul>
+            </div>
+        </div>
+    </div>
+
 </div>
 
-<div id="importModal">
-    <div class="modal-box">
-        <h3>資料匯入中...</h3>
-        <p id="importStatus" style="color:#666; margin:10px 0;">正在解析...</p>
-        <div style="width:100%; background:#eee; height:5px; border-radius:3px; overflow:hidden;">
-            <div id="progressBar" style="width:0%; background:var(--accent); height:100%; transition: width 0.3s;"></div>
-        </div>
+<div id="loadingModal">
+    <div class="loading-box">
+        <h3>資料處理中...</h3>
+        <div style="width:100%; height:4px; background:#eee; margin-top:10px;"><div id="progressBar" style="width:0; height:100%; background:var(--accent);"></div></div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, setDoc, getDoc, serverTimestamp, limit, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Firebase 設定
+    // --- Configuration (Update for V16.2) ---
     const firebaseConfig = {
         apiKey: "AIzaSyALj-w6MSC_5CgGCVUVFveoV8-ykRxcu24",
         authDomain: "crm-1225-003.firebaseapp.com",
@@ -199,293 +321,609 @@
         messagingSenderId: "566985177794",
         appId: "1:566985177794:web:fcf21c033bd62c3bd7195b"
     };
-
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const COL = "customers_v10_import"; // 升級為 V10
 
-    // 常數
+    // Collections
+    const C_CUSTOMERS = "customers_v16"; 
+    const C_PRODUCTS = "products_v16";
+    const C_HARVEST = "harvests_v16";
+    const C_FINANCE = "finance_logs_v16";
+    const C_AUDIT = "audit_logs_v16";
+    const C_GLOBAL = "global_settings_v16";
+
+    // Constants
+    const SECTORS = ["大埔", "二鬮", "添福", "中園街", "弘道", "老街", "長泰街", "介壽路", "永安街", "光明路", "大同路", "中華路", "中正路", "菜市場", "中山路", "大仁路", "復興路", "北大", "鶯歌", "其他"];
     const FLAVORS = ["原味", "甜味", "巧克力", "草莓", "黑糖"];
     const DAYS = ["日","一","二","三","四","五","六"];
-    const PATTERNS = [{l:"平日",d:[1,2,3,4,5]},{l:"每天",d:[0,1,2,3,4,5,6]},{l:"一三五",d:[1,3,5]},{l:"二四六",d:[2,4,6]}];
-    const HOLIDAYS = {"2025-12-25":"聖誕","2026-1-1":"元旦","2026-2-17":"除夕","2026-2-28":"228"};
 
+    // State
+    let customersData = [];
+    let productsMap = {}; 
+    let globalEvents = {}; 
     let currentId = null;
     let currentMatrix = {};
-    let manualOverrides = {}; 
-    let startMonth = new Date(2025, 11, 1);
+    let manualOverrides = {};
 
-    // --- UI Init ---
-    const ptBox = document.getElementById('patternBox');
-    PATTERNS.forEach(p => {
-        const btn = document.createElement('div');
-        btn.className = 'pt-btn'; btn.textContent = p.l; btn.onclick=()=>applyPattern(p.d);
-        ptBox.appendChild(btn);
-    });
-
-    const mxBody = document.getElementById('matrixBody');
-    [1,2,3,4,5,6,0].forEach(dIdx => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="font-weight:bold; color:${dIdx===0||dIdx===6?'red':'#333'}">${DAYS[dIdx]}</td>`;
-        FLAVORS.forEach(f => {
-            const key = `${dIdx}_${f}`;
-            const td = document.createElement('td');
-            const opts = (f === "原味") ? [1,2,4,6] : [1,2];
-            let html = "";
-            opts.forEach(v => html += `<span class="t-btn" data-key="${key}" data-val="${v}" onclick="toggleMatrix(this)">${v}</span>`);
-            td.innerHTML = html;
-            tr.appendChild(td);
-        });
-        mxBody.appendChild(tr);
-    });
-
-    // --- Logic ---
-    window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('collapsed');
-
-    window.toggleMatrix = (el) => {
-        const key = el.dataset.key;
-        const val = parseInt(el.dataset.val);
-        const active = el.classList.contains('active');
-        document.querySelectorAll(`.t-btn[data-key="${key}"]`).forEach(b => b.classList.remove('active'));
-        if(active) delete currentMatrix[key];
-        else { el.classList.add('active'); currentMatrix[key] = val; }
-        renderCal();
+    // --- Initialization ---
+    window.onload = async () => {
+        initHub();
+        initUI();
+        await loadSettings();
+        subscribeCustomers();
     };
 
-    function applyPattern(days) {
-        document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
-        currentMatrix = {};
-        days.forEach(d => {
-            const k = `${d}_原味`; currentMatrix[k] = 1;
-            const b = document.querySelector(`.t-btn[data-key="${k}"][data-val="1"]`);
-            if(b) b.classList.add('active');
-        });
-        renderCal();
+    function initHub() {
+        window.switchView = (viewId) => {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.hub-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${viewId}`).classList.add('active');
+            document.querySelector(`button[onclick="switchView('${viewId}')"]`).classList.add('active');
+            
+            if(viewId === 'finance') loadFinanceLogs();
+            if(viewId === 'settings') renderProductList();
+        };
     }
 
-    window.cycleState = (dateStr) => {
-        let st = manualOverrides[dateStr] || 0;
-        st = (st + 1) % 3;
-        if(st === 0) delete manualOverrides[dateStr];
-        else manualOverrides[dateStr] = st;
-        renderCal();
-    };
+    function initUI() {
+        const sel = document.getElementById('inpSector');
+        SECTORS.forEach(s => { const o = document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+        
+        const tb = document.getElementById('matrixBody');
+        [1,2,3,4,5,6,0].forEach(d => {
+            let html = `<td style="font-weight:bold; color:${d===0||d===6?'red':'#333'}">${DAYS[d]}</td>`;
+            FLAVORS.forEach(f => {
+                const key = `${d}_${f}`;
+                const opts = (f==="原味")?[1,2,4,6]:[1,2];
+                let btns = opts.map(v => `<span class="c-item" style="display:inline-block; padding:2px 6px; border:1px solid #ddd; margin:1px; border-radius:3px;" data-key="${key}" data-val="${v}" onclick="toggleMx(this)">${v}</span>`).join('');
+                html += `<td>${btns}</td>`;
+            });
+            const tr = document.createElement('tr'); tr.innerHTML = html; tb.appendChild(tr);
+        });
 
-    function renderCal() {
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = "";
-        const price = parseInt(document.getElementById('inpPrice').value) || 35;
-        const doHol = document.getElementById('chkHoliday').checked;
-
-        for(let i=0; i<6; i++) {
-            const viewD = new Date(startMonth.getFullYear(), startMonth.getMonth()+i, 1);
-            const y = viewD.getFullYear();
-            const m = viewD.getMonth();
-            const dim = new Date(y, m+1, 0).getDate();
-            const fd = new Date(y, m, 1).getDay();
-            let mQty = 0; let cells = "";
-            for(let k=0; k<fd; k++) cells += `<div></div>`;
-
-            for(let d=1; d<=dim; d++) {
-                const dateStr = `${y}-${m+1}-${d}`;
-                const dw = new Date(y,m,d).getDay();
-                const isHol = HOLIDAYS[dateStr];
-                
-                let bQty = 0; let txt = "";
-                FLAVORS.forEach(f => {
-                    const q = currentMatrix[`${dw}_${f}`];
-                    if(q) { bQty += q; txt += (f==="原味"?"原":f[0]) + q + " "; }
+        const ptBox = document.getElementById('patternBox');
+        [{l:"平日",d:[1,2,3,4,5]}, {l:"每天",d:[0,1,2,3,4,5,6]}, {l:"一三五",d:[1,3,5]}].forEach(p => {
+            const b = document.createElement('button'); b.textContent=p.l; b.className='btn btn-primary'; b.style.marginRight='5px';
+            b.onclick = () => {
+                document.querySelectorAll('span[data-key]').forEach(e=>e.style.background='white');
+                currentMatrix={};
+                p.d.forEach(d => {
+                    const k=`${d}_原味`; currentMatrix[k]=1;
+                    const el = document.querySelector(`span[data-key="${k}"][data-val="1"]`);
+                    if(el) { el.style.background='#8e44ad'; el.style.color='white'; }
                 });
-
-                let st = "st-none"; let fQty = bQty; const ovr = manualOverrides[dateStr];
-                if(isHol && !doHol) { st="st-holiday"; fQty=0; }
-                else if(ovr === 1) { st="st-paused"; fQty=0; }
-                else if(ovr === 2) { st="st-missed"; fQty=0; }
-                else if(bQty > 0) st="st-normal";
-                mQty += fQty;
-
-                let inner = `<span class="date-num">${d}</span>`;
-                if(isHol) inner += `<span style="font-size:0.6rem;color:red;position:absolute;top:2px;right:2px;">${isHol}</span>`;
-                if(bQty > 0 || ovr > 0) inner += `<div class="content-badge">${txt}</div>`;
-                cells += `<div class="cal-cell ${st}" onclick="cycleState('${dateStr}')">${inner}</div>`;
-            }
-
-            const card = document.createElement('div');
-            card.className = "cal-card";
-            card.innerHTML = `<div class="cal-header"><span>${y}/${m+1}</span><span style="color:var(--accent)">${mQty}瓶 | $${mQty*price}</span></div><div class="cal-grid"><div class="cal-head">日</div><div class="cal-head">一</div><div class="cal-head">二</div><div class="cal-head">三</div><div class="cal-head">四</div><div class="cal-head">五</div><div class="cal-head">六</div>${cells}</div>`;
-            grid.appendChild(card);
-        }
-    }
-
-    // --- CRUD ---
-    window.resetForm = (isNew) => {
-        currentId = null;
-        document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('workspace').style.display = 'flex';
-        document.getElementById('fabGroup').style.display = 'flex';
-        document.getElementById('inpName').value = "";
-        document.getElementById('inpPhone').value = "";
-        document.getElementById('inpAddr').value = "";
-        document.getElementById('inpPrice').value = 35;
-        document.getElementById('chkHoliday').checked = false;
-        currentMatrix = {}; manualOverrides = {};
-        document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.c-item').forEach(e => e.classList.remove('active'));
-        renderCal();
-        if(isNew) document.getElementById('inpName').focus();
-    };
-
-    function loadCustomer(id, data) {
-        resetForm(false);
-        currentId = id;
-        document.getElementById('inpName').value = data.name;
-        document.getElementById('inpPhone').value = data.phone;
-        document.getElementById('inpAddr').value = data.address;
-        document.getElementById('inpPrice').value = data.unitPrice;
-        document.getElementById('chkHoliday').checked = data.holidayDeliver;
-        currentMatrix = data.matrix || {};
-        manualOverrides = data.manualOverrides || {};
-        Object.keys(currentMatrix).forEach(k => {
-            const v = currentMatrix[k];
-            const btn = document.querySelector(`.t-btn[data-key="${k}"][data-val="${v}"]`);
-            if(btn) btn.classList.add('active');
+                renderCal();
+            };
+            ptBox.appendChild(b);
         });
-        renderCal();
+        document.getElementById('billMonth').value = new Date().toISOString().slice(0,7);
+        
+        // Import Logic (Restored V15)
+        document.getElementById('csvInput').addEventListener('change', importCSV);
     }
 
-    window.cloneCustomer = async () => {
-        if(!currentId) return alert("請先選擇客戶");
-        const newName = prompt("新客戶姓名:", document.getElementById('inpName').value + "(複製)");
-        if(!newName) return;
-        const newData = {
-            name: newName, phone: "", address: document.getElementById('inpAddr').value,
-            unitPrice: parseInt(document.getElementById('inpPrice').value),
-            holidayDeliver: document.getElementById('chkHoliday').checked,
-            matrix: currentMatrix, manualOverrides: {}, updatedAt: serverTimestamp()
-        };
-        const ref = await addDoc(collection(db, COL), newData);
-        loadCustomer(ref.id, newData);
-        alert(`已複製為: ${newName}`);
+    // --- Core Data Logic ---
+    async function loadSettings() {
+        onSnapshot(collection(db, C_PRODUCTS), (snap) => {
+            snap.forEach(d => { productsMap[d.data().name] = d.data(); });
+            renderProductList();
+        });
+        onSnapshot(doc(db, C_GLOBAL, "calendar"), (docSnap) => {
+            if(docSnap.exists()) {
+                globalEvents = docSnap.data();
+                renderGlobalList();
+                if(currentId) renderCal();
+            }
+        });
+    }
+
+    function subscribeCustomers() {
+        onSnapshot(query(collection(db, C_CUSTOMERS), orderBy("updatedAt", "desc")), (snap) => {
+            customersData = [];
+            snap.forEach(d => customersData.push({id: d.id, data: d.data()}));
+            filterList();
+        });
+    }
+
+    window.toggleMx = (el) => {
+        const k = el.dataset.key; const v = parseInt(el.dataset.val);
+        const active = el.style.background === 'rgb(142, 68, 173)';
+        document.querySelectorAll(`span[data-key="${k}"]`).forEach(e=>{e.style.background='white'; e.style.color='#333';});
+        if(active) delete currentMatrix[k];
+        else { currentMatrix[k] = v; el.style.background='#8e44ad'; el.style.color='white'; }
+        renderCal();
     };
 
-    window.saveData = async (shouldExit) => {
-        const name = document.getElementById('inpName').value;
-        if(!name) return alert("請輸入姓名");
-        const payload = {
-            name: name, phone: document.getElementById('inpPhone').value,
-            address: document.getElementById('inpAddr').value,
-            unitPrice: parseInt(document.getElementById('inpPrice').value),
-            holidayDeliver: document.getElementById('chkHoliday').checked,
-            matrix: currentMatrix, manualOverrides: manualOverrides, updatedAt: serverTimestamp()
-        };
-        if(currentId) await updateDoc(doc(db, COL, currentId), payload);
-        else await addDoc(collection(db, COL), payload);
+    // --- Operations View Functions ---
+    window.filterList = () => {
+        const key = document.getElementById('searchInput').value.toLowerCase();
+        const list = document.getElementById('customerList');
+        list.innerHTML = '';
+        
+        const filtered = customersData.filter(c => 
+            c.data.name.includes(key) || (c.data.phone||'').includes(key) || (c.data.address||'').includes(key)
+        );
 
-        if(shouldExit) {
-            document.getElementById('workspace').style.display = 'none';
-            document.getElementById('fabGroup').style.display = 'none';
-            document.getElementById('emptyState').style.display = 'block';
-            currentId = null;
-            alert("✅ 儲存並清除畫面");
-        } else {
-            alert("✅ 儲存成功");
-        }
-    };
+        filtered.sort((a,b) => {
+            let ia = SECTORS.indexOf(a.data.sector||"其他");
+            let ib = SECTORS.indexOf(b.data.sector||"其他");
+            return (ia===-1?99:ia) - (ib===-1?99:ib);
+        });
 
-    onSnapshot(query(collection(db, COL), orderBy("updatedAt", "desc")), (snap) => {
-        const list = document.getElementById('customerList'); list.innerHTML = "";
-        snap.forEach(d => {
-            const c = d.data();
+        let lastSec = "";
+        filtered.forEach(c => {
+            const sec = c.data.sector || "其他";
+            if(sec !== lastSec) {
+                const h = document.createElement('div'); h.className='addr-header'; h.textContent=`🏙️ ${sec}`;
+                list.appendChild(h); lastSec = sec;
+            }
             const li = document.createElement('li');
-            li.className = `c-item ${d.id===currentId?'active':''}`;
-            li.innerHTML = `<div class="c-avatar">${c.name[0]}</div><div class="c-info" style="margin-left:10px;flex:1;"><div style="font-weight:bold;font-size:0.95rem;">${c.name}</div><div style="color:#888;font-size:0.8rem;">${c.phone||'-'}</div></div>`;
-            li.onclick = () => loadCustomer(d.id, c);
+            li.className = `c-item ${c.data.isSuspended?'suspended':''} ${c.id===currentId?'active':''}`;
+            li.innerHTML = `<span>${c.data.name}</span><span style="color:#999;font-size:0.75rem">${c.data.phone||''}</span>`;
+            li.onclick = () => loadCustomer(c);
             list.appendChild(li);
         });
-    });
-    
-    document.getElementById('inpPrice').addEventListener('input', renderCal);
-    document.getElementById('chkHoliday').addEventListener('change', renderCal);
+    };
 
-    // --- CSV Import Engine ---
-    document.getElementById('csvInput').addEventListener('change', (e) => {
+    window.resetForm = (isNew) => {
+        currentId = null;
+        document.getElementById('emptyState').style.display = isNew ? 'none' : 'block';
+        document.getElementById('opsWorkspace').style.display = isNew ? 'flex' : 'none';
+        document.getElementById('fabSave').style.display = isNew ? 'flex' : 'none';
+        
+        document.querySelectorAll('input').forEach(i => { if(i.type!=='checkbox' && i.type!=='date' && i.type!=='month' && i.type!=='file') i.value=''; });
+        document.getElementById('inpSector').value = "其他";
+        document.getElementById('inpPrice').value = 35;
+        document.getElementById('chkSuspended').checked = false;
+        document.getElementById('chkHoliday').checked = false;
+        
+        currentMatrix = {}; manualOverrides = {};
+        document.querySelectorAll('span[data-key]').forEach(e=>{e.style.background='white';e.style.color='#333'});
+        if(isNew) renderCal();
+    };
+
+    function loadCustomer(cObj) {
+        resetForm(false);
+        currentId = cObj.id;
+        const d = cObj.data;
+        
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('opsWorkspace').style.display = 'flex';
+        document.getElementById('fabSave').style.display = 'flex';
+
+        document.getElementById('inpName').value = d.name;
+        document.getElementById('inpPhone').value = d.phone||'';
+        document.getElementById('inpAddr').value = d.address||'';
+        document.getElementById('inpSector').value = d.sector||'其他';
+        document.getElementById('inpPrice').value = d.unitPrice||35;
+        document.getElementById('inpNoteA').value = d.noteA||'';
+        document.getElementById('inpNoteB').value = d.noteB||'';
+        document.getElementById('chkSuspended').checked = d.isSuspended||false;
+        document.getElementById('chkHoliday').checked = d.holidayDeliver||false;
+
+        currentMatrix = d.matrix || {};
+        manualOverrides = d.manualOverrides || {};
+
+        Object.keys(currentMatrix).forEach(k => {
+            const el = document.querySelector(`span[data-key="${k}"][data-val="${currentMatrix[k]}"]`);
+            if(el) { el.style.background='#8e44ad'; el.style.color='white'; }
+        });
+        renderCal();
+        calcBill();
+    }
+
+    window.saveData = async () => {
+        const name = document.getElementById('inpName').value;
+        if(!name) return alert("請輸入姓名");
+        
+        const data = {
+            name,
+            phone: document.getElementById('inpPhone').value,
+            address: document.getElementById('inpAddr').value,
+            sector: document.getElementById('inpSector').value,
+            unitPrice: parseInt(document.getElementById('inpPrice').value)||35,
+            noteA: document.getElementById('inpNoteA').value,
+            noteB: document.getElementById('inpNoteB').value,
+            isSuspended: document.getElementById('chkSuspended').checked,
+            holidayDeliver: document.getElementById('chkHoliday').checked,
+            matrix: currentMatrix,
+            manualOverrides: manualOverrides,
+            updatedAt: serverTimestamp()
+        };
+
+        if(currentId) {
+            await updateDoc(doc(db, C_CUSTOMERS, currentId), data);
+            addLog("update_customer", name, "更新基本資料");
+        } else {
+            await addDoc(collection(db, C_CUSTOMERS), data);
+            addLog("create_customer", name, "建立新客戶");
+        }
+        alert("✅ 儲存成功");
+    };
+
+    window.deleteCustomer = async () => {
+        if(!currentId || !confirm("確定刪除？")) return;
+        await deleteDoc(doc(db, C_CUSTOMERS, currentId));
+        addLog("delete_customer", document.getElementById('inpName').value, "永久刪除");
+        resetForm(false);
+    };
+
+    // --- CSV Import/Export (Restored from V15) ---
+    window.exportCSV = () => {
+        if(customersData.length === 0) return alert("無資料");
+        let csv = "\uFEFF姓名,電話,街區,地址,備註A,備註B,暫停訂購,單價,見紅不休,週日,週一,週二,週三,週四,週五,週六\n";
+        
+        customersData.forEach(item => {
+            const c = item.data;
+            const daysData = [];
+            for(let d=0; d<7; d++) {
+                let parts = [];
+                FLAVORS.forEach(f => {
+                    const k = `${d}_${f}`;
+                    if(c.matrix && c.matrix[k]>0) parts.push(`${f}${c.matrix[k]}`);
+                });
+                daysData.push(parts.join(";"));
+            }
+            const row = [
+                c.name, c.phone||"", c.sector||"其他", c.address||"", c.noteA||"", c.noteB||"",
+                c.isSuspended?"TRUE":"FALSE", c.unitPrice||35, c.holidayDeliver?"TRUE":"FALSE", ...daysData
+            ];
+            csv += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",") + "\n";
+        });
+        
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'}));
+        link.download = `V16_2_Export_${new Date().toISOString().slice(0,10)}.csv`;
+        link.click();
+    };
+
+    async function importCSV(e) {
         const file = e.target.files[0];
         if(!file) return;
-        
         const reader = new FileReader();
+        document.getElementById('loadingModal').style.display = 'flex';
+        
         reader.onload = async (evt) => {
             const text = evt.target.result;
             const rows = text.split(/\r?\n/);
+            const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
             
-            // 簡易解析 CSV (假設沒有引號包覆的逗號)
-            const headers = rows[0].split(',').map(h => h.trim());
-            const dataIdx = {
-                name: headers.indexOf("姓名"),
-                phone: headers.indexOf("電話"),
-                addr: headers.indexOf("地址"),
-                price: headers.indexOf("單價"),
-                hol: headers.indexOf("見紅不休"),
+            const idx = {
+                name: headers.indexOf("姓名"), phone: headers.indexOf("電話"), addr: headers.indexOf("地址"),
+                sector: headers.indexOf("街區"), noteA: headers.indexOf("備註A"), noteB: headers.indexOf("備註B"),
+                susp: headers.indexOf("暫停訂購"), price: headers.indexOf("單價"), hol: headers.indexOf("見紅不休"),
                 days: [headers.indexOf("週日"), headers.indexOf("週一"), headers.indexOf("週二"), headers.indexOf("週三"), headers.indexOf("週四"), headers.indexOf("週五"), headers.indexOf("週六")]
             };
 
-            if(dataIdx.name === -1) return alert("錯誤：CSV 找不到 '姓名' 欄位，請檢查標題列。");
-
-            // UI 顯示匯入中
-            document.getElementById('importModal').style.display = 'flex';
-            const status = document.getElementById('importStatus');
-            const bar = document.getElementById('progressBar');
+            if(idx.name === -1) { alert("CSV 格式錯誤: 缺少姓名"); document.getElementById('loadingModal').style.display='none'; return; }
             
             let count = 0;
-            const total = rows.length - 1;
-            const batchSize = 400; // Firestore batch limit 500
+            const batchSize = 400; // Firestore batch limit is 500
+            let batch = writeBatch(db);
             
-            // 處理資料
-            for (let i = 1; i < rows.length; i++) {
+            for(let i=1; i<rows.length; i++) {
                 if(!rows[i].trim()) continue;
-                const cols = rows[i].split(',').map(c => c.trim());
+                // Simple CSV split handling quotes
+                const cols = rows[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
                 
-                // 解析每日內容
+                // Need to map cleanCols index back to original header index? 
+                // Actually the regex split might not align perfectly if empty columns exist.
+                // Robust approach: split by comma but respect quotes.
+                // Re-using specific logic from V15 for safety:
+                const rowArr = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.trim().replace(/^"|"$/g, ''));
+                
                 const matrix = {};
-                dataIdx.days.forEach((colIdx, dayIdx) => { // dayIdx: 0=Sun ... 6=Sat
-                    if(colIdx > -1 && cols[colIdx]) {
-                        // 格式: "原味2,草莓1"
-                        const items = cols[colIdx].split(/[,，]/);
-                        items.forEach(item => {
-                            const match = item.match(/([\u4e00-\u9fa5]+)(\d+)/); // 抓中文+數字
-                            if(match) {
-                                const flavor = match[1]; // 原味
-                                const qty = parseInt(match[2]);
-                                matrix[`${dayIdx}_${flavor}`] = qty;
-                            }
+                idx.days.forEach((colIdx, dayIdx) => {
+                    if(colIdx > -1 && rowArr[colIdx]) {
+                        rowArr[colIdx].split(/[,;]/).forEach(item => {
+                            const match = item.match(/([\u4e00-\u9fa5]+)(\d+)/);
+                            if(match) matrix[`${dayIdx}_${match[1]}`] = parseInt(match[2]);
                         });
                     }
                 });
 
-                const docData = {
-                    name: cols[dataIdx.name],
-                    phone: dataIdx.phone > -1 ? cols[dataIdx.phone] : "",
-                    address: dataIdx.addr > -1 ? cols[dataIdx.addr] : "",
-                    unitPrice: dataIdx.price > -1 ? (parseInt(cols[dataIdx.price]) || 35) : 35,
-                    holidayDeliver: dataIdx.hol > -1 ? (cols[dataIdx.hol] === "TRUE" || cols[dataIdx.hol] === "是") : false,
-                    matrix: matrix,
-                    manualOverrides: {},
-                    updatedAt: serverTimestamp()
-                };
+                const docRef = doc(collection(db, C_CUSTOMERS));
+                batch.set(docRef, {
+                    name: rowArr[idx.name],
+                    phone: idx.phone>-1 ? rowArr[idx.phone] : "",
+                    address: idx.addr>-1 ? rowArr[idx.addr] : "",
+                    sector: idx.sector>-1 ? (rowArr[idx.sector]||"其他") : "其他",
+                    noteA: idx.noteA>-1 ? rowArr[idx.noteA] : "",
+                    noteB: idx.noteB>-1 ? rowArr[idx.noteB] : "",
+                    isSuspended: idx.susp>-1 ? (rowArr[idx.susp]==="TRUE") : false,
+                    unitPrice: idx.price>-1 ? (parseInt(rowArr[idx.price])||35) : 35,
+                    holidayDeliver: idx.hol>-1 ? (rowArr[idx.hol]==="TRUE") : false,
+                    matrix: matrix, manualOverrides: {}, updatedAt: serverTimestamp()
+                });
 
-                // 寫入 Firestore (單筆寫入，若量大建議改用 Batch)
-                await addDoc(collection(db, COL), docData);
-                
                 count++;
-                const pct = Math.round((count / total) * 100);
-                bar.style.width = pct + "%";
-                status.textContent = `匯入中... (${count}/${total})`;
+                if(count % batchSize === 0) { await batch.commit(); batch = writeBatch(db); }
+                document.getElementById('progressBar').style.width = Math.min(100, Math.round((i / rows.length)*100)) + "%";
             }
-
-            document.getElementById('importModal').style.display = 'none';
-            alert(`匯入完成！共新增 ${count} 筆客戶。`);
+            await batch.commit();
+            
+            document.getElementById('loadingModal').style.display = 'none';
+            alert(`匯入完成: ${count} 筆`);
+            e.target.value = '';
         };
         reader.readAsText(file);
-    });
+    }
+
+    // --- Calendar & Bill Logic ---
+    function renderCal() {
+        const grid = document.getElementById('calendarGrid');
+        grid.innerHTML = '';
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        for(let i=0; i<2; i++) {
+            const viewD = new Date(start.getFullYear(), start.getMonth()+i, 1);
+            const y = viewD.getFullYear(); const m = viewD.getMonth();
+            const dim = new Date(y, m+1, 0).getDate();
+            const fd = new Date(y, m, 1).getDay();
+
+            let cells = '';
+            for(let k=0; k<fd; k++) cells += `<div></div>`;
+
+            let mTotal = 0;
+            for(let d=1; d<=dim; d++) {
+                const dateStr = `${y}-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+                const dw = new Date(y,m,d).getDay();
+                
+                const globalType = globalEvents[dateStr];
+                const override = manualOverrides[dateStr];
+                const suspended = document.getElementById('chkSuspended').checked;
+                const holDeliver = document.getElementById('chkHoliday').checked;
+                const isSun = (dw===0);
+                
+                let bQty = 0; let txt = "";
+                FLAVORS.forEach(f => {
+                    const q = currentMatrix[`${dw}_${f}`] || 0;
+                    if(q>0) { bQty+=q; txt+=(f[0]+q); }
+                });
+
+                let state = 'st-normal'; let finalQty = bQty; let overlay = "";
+                if(bQty===0) state = 'st-none';
+
+                if (globalType === 'typhoon') { state = 'st-paused'; finalQty = 0; overlay = "颱風"; }
+                else if (override === 1) { state = 'st-paused'; finalQty = 0; overlay = "停"; }
+                else if (suspended) { state = 'st-paused'; finalQty = 0; overlay = "暫停"; }
+                else if ((isSun || globalType === 'holiday') && !holDeliver) { state = 'st-holiday'; finalQty = 0; }
+                
+                mTotal += finalQty;
+                cells += `<div class="cal-cell ${state}" onclick="cycleDate('${dateStr}')"><span style="position:absolute;top:1px;left:2px;font-weight:bold;">${d}</span>${finalQty>0 ? `<div class="content-badge">${txt}</div>` : ''}${overlay ? `<div class="suspend-overlay">${overlay}</div>` : ''}</div>`;
+            }
+
+            const card = document.createElement('div');
+            card.className='cal-card';
+            card.innerHTML = `<div style="font-weight:bold;margin-bottom:5px;">${y}/${m+1} (預估: ${mTotal}瓶)</div><div class="cal-grid">${cells}</div>`;
+            grid.appendChild(card);
+        }
+    }
+
+    window.cycleDate = (dateStr) => {
+        if(!currentId) return;
+        const old = manualOverrides[dateStr] || 0;
+        manualOverrides[dateStr] = (old === 0) ? 1 : 0;
+        if(manualOverrides[dateStr] === 0) delete manualOverrides[dateStr];
+        renderCal();
+    };
+
+    window.calcBill = async (isManualRecalc = false) => {
+        if(!currentId) return;
+        const mStr = document.getElementById('billMonth').value;
+        const [y, m] = mStr.split('-').map(Number);
+        const dim = new Date(y, m, 0).getDate();
+        
+        let totalBottles = 0;
+        for(let d=1; d<=dim; d++) {
+            const dateStr = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
+            const dw = new Date(y, m-1, d).getDay();
+            
+            const globalType = globalEvents[dateStr];
+            const override = manualOverrides[dateStr];
+            const suspended = document.getElementById('chkSuspended').checked;
+            const holDeliver = document.getElementById('chkHoliday').checked;
+            const isSun = (dw===0);
+
+            let dailyQ = 0;
+            FLAVORS.forEach(f => dailyQ += (currentMatrix[`${dw}_${f}`]||0));
+
+            if (globalType === 'typhoon' || override === 1 || suspended) dailyQ = 0;
+            else if ((isSun || globalType === 'holiday') && !holDeliver) dailyQ = 0;
+            
+            totalBottles += dailyQ;
+        }
+
+        const basePrice = parseInt(document.getElementById('inpPrice').value) || 35;
+        const totalAmt = totalBottles * basePrice;
+
+        document.getElementById('b_qty').textContent = totalBottles;
+        document.getElementById('b_amt').textContent = `$${totalAmt}`;
+
+        if(isManualRecalc) {
+            await addLog("recalc_bill", document.getElementById('inpName').value, `重新計算${mStr}帳單: ${totalAmt}元`);
+            alert("已重新計算並記錄日誌");
+        }
+    };
+
+    window.addPayment = async () => {
+        const amt = document.getElementById('payAmount').value;
+        const note = document.getElementById('payNote').value;
+        if(!amt) return alert("請輸入金額");
+        
+        await addDoc(collection(db, C_FINANCE), {
+            customerId: currentId,
+            customerName: document.getElementById('inpName').value,
+            month: document.getElementById('billMonth').value,
+            amount: parseInt(amt),
+            note: note,
+            timestamp: serverTimestamp()
+        });
+        await addLog("collect_money", document.getElementById('inpName').value, `收款 $${amt} (${note})`);
+        document.getElementById('payAmount').value = '';
+        document.getElementById('payNote').value = '';
+        alert("✅ 收款已記錄");
+    };
+
+    // --- Finance & Logs ---
+    window.loadFinanceLogs = () => {
+        const tbody = document.getElementById('financeLogBody');
+        tbody.innerHTML = '<tr><td colspan="6">載入中...</td></tr>';
+        onSnapshot(query(collection(db, C_FINANCE), orderBy("timestamp", "desc"), limit(50)), (snap) => {
+            tbody.innerHTML = '';
+            snap.forEach(d => {
+                const r = d.data();
+                const ts = r.timestamp ? r.timestamp.toDate().toLocaleString() : '-';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${ts}</td><td>${r.customerName}</td><td>${r.month}</td><td style="color:green;font-weight:bold;">$${r.amount}</td><td>${r.note}</td><td>Admin</td>`;
+                tbody.appendChild(tr);
+            });
+        });
+        const ul = document.getElementById('auditLogList');
+        onSnapshot(query(collection(db, C_AUDIT), orderBy("timestamp", "desc"), limit(50)), (snap) => {
+            ul.innerHTML = '';
+            snap.forEach(d => {
+                const r = d.data();
+                const ts = r.timestamp ? r.timestamp.toDate().toLocaleString() : '-';
+                const li = document.createElement('li');
+                li.style.borderBottom='1px solid #eee'; li.style.padding='5px';
+                li.innerHTML = `<b>[${ts}]</b> ${r.action} @ ${r.target} - ${r.detail}`;
+                ul.appendChild(li);
+            });
+        });
+    };
+
+    // --- Production & Forecast (Updated V16.2: Breakdown) ---
+    window.saveHarvest = async () => {
+        const d = document.getElementById('harvestDate').value;
+        const w = document.getElementById('harvestWeight').value;
+        if(!d || !w) return alert("資料不全");
+        await addDoc(collection(db, C_HARVEST), { date: d, weight: parseFloat(w), note: document.getElementById('harvestNote').value, timestamp: serverTimestamp() });
+        addLog("add_harvest", "採收記錄", `${d}: ${w}kg`);
+        alert("登記成功");
+    };
+
+    window.calcForecast = async () => {
+        document.getElementById('loadingModal').style.display = 'flex';
+        const tbody = document.getElementById('forecastBody');
+        tbody.innerHTML = '';
+        
+        const days = [];
+        const today = new Date();
+        for(let i=0; i<14; i++) {
+            const d = new Date(today); d.setDate(today.getDate()+i);
+            days.push(d.toISOString().split('T')[0]);
+        }
+
+        const harvestMap = {};
+        const hSnap = await getDocs(query(collection(db, C_HARVEST), orderBy("date", "desc"), limit(30)));
+        hSnap.forEach(d => { harvestMap[d.data().date] = d.data().weight; });
+
+        let forecastMap = {}; // date -> {bottles, kg, flavors:{}}
+        const weightMap = {}; 
+        FLAVORS.forEach(f => weightMap[f] = (productsMap[f]?.weight || 936)/1000 );
+
+        customersData.forEach(cObj => {
+            const c = cObj.data;
+            if(c.isSuspended) return;
+
+            days.forEach(dateStr => {
+                const dateObj = new Date(dateStr);
+                const dw = dateObj.getDay();
+                
+                const globalType = globalEvents[dateStr];
+                const override = (c.manualOverrides||{})[dateStr];
+                const isHol = (dw===0 || globalType==='holiday');
+
+                if(globalType === 'typhoon' || override === 1) return;
+                if(isHol && !c.holidayDeliver) return;
+
+                if(!forecastMap[dateStr]) forecastMap[dateStr] = {bottles:0, kg:0, flavors:{}};
+                
+                FLAVORS.forEach(f => {
+                    const q = (c.matrix||{})[`${dw}_${f}`] || 0;
+                    if(q>0) {
+                        forecastMap[dateStr].bottles += q;
+                        forecastMap[dateStr].kg += (q * weightMap[f]);
+                        forecastMap[dateStr].flavors[f] = (forecastMap[dateStr].flavors[f]||0) + q;
+                    }
+                });
+            });
+        });
+
+        days.forEach(dateStr => {
+            const data = forecastMap[dateStr] || {bottles:0, kg:0, flavors:{}};
+            const act = harvestMap[dateStr] || 0;
+            const gap = act - data.kg;
+            
+            // Generate Flavor Detail String
+            let flavorStr = "";
+            FLAVORS.forEach(f => {
+                if(data.flavors[f] > 0) flavorStr += `${f[0]}${data.flavors[f]} `;
+            });
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${dateStr}</td>
+                <td>
+                    <b>${data.bottles}</b>
+                    <span class="flavor-detail">${flavorStr}</span>
+                </td>
+                <td>${data.kg.toFixed(1)}</td>
+                <td>${act > 0 ? act : '-'}</td>
+                <td class="${gap>=0?'gap-pos':'gap-neg'}">${act>0 ? gap.toFixed(1) : '?'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        document.getElementById('loadingModal').style.display = 'none';
+    };
+
+    // --- Settings ---
+    window.renderProductList = () => {
+        const div = document.getElementById('productList');
+        div.innerHTML = '';
+        Object.values(productsMap).forEach(p => {
+            const item = document.createElement('div');
+            item.className = 'prod-list-item';
+            item.innerHTML = `<span><b>${p.name}</b> (${p.weight}g) $${p.price}</span> <button class="btn btn-danger" style="font-size:0.7rem">X</button>`;
+            div.appendChild(item);
+        });
+    };
+
+    window.addProduct = async () => {
+        const name = document.getElementById('prodName').value;
+        const w = document.getElementById('prodWeight').value;
+        const p = document.getElementById('prodPrice').value;
+        if(!name) return;
+        await addDoc(collection(db, C_PRODUCTS), { name, weight: parseInt(w), price: parseInt(p) });
+        addLog("setting_change", "產品", `更新 ${name}: ${w}g / $${p}`);
+    };
+
+    window.addGlobalEvent = async () => {
+        const d = document.getElementById('globalDate').value;
+        const t = document.getElementById('globalType').value;
+        if(!d) return;
+        globalEvents[d] = t;
+        await setDoc(doc(db, C_GLOBAL, "calendar"), globalEvents);
+        renderGlobalList();
+        addLog("setting_change", "全域日程", `設定 ${d} 為 ${t}`);
+    };
+
+    function renderGlobalList() {
+        const ul = document.getElementById('globalEventList');
+        ul.innerHTML = '';
+        Object.keys(globalEvents).sort().forEach(d => {
+            const li = document.createElement('li');
+            li.textContent = `${d}: ${globalEvents[d] === 'typhoon' ? '🌪️ 颱風停送' : '🔴 國定假日'}`;
+            ul.appendChild(li);
+        });
+    }
+
+    async function addLog(action, target, detail) {
+        await addDoc(collection(db, C_AUDIT), { action, target, detail, timestamp: serverTimestamp() });
+    }
 
 </script>
 </body>

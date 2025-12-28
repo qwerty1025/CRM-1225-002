@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>羊奶中控系統 V9 (複製/防呆版)</title>
+    <title>羊奶中控系統 V10 (批次匯入版)</title>
     <style>
         :root {
             --sidebar-width: 240px;
@@ -15,23 +15,17 @@
         }
         body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; overflow: hidden; }
 
-        /* --- 1. 左側欄 --- */
+        /* 左側欄 */
         .sidebar {
-            width: var(--sidebar-width);
-            background: white;
-            border-right: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            transition: width 0.3s ease;
-            flex-shrink: 0; z-index: 10;
+            width: var(--sidebar-width); background: white; border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; transition: width 0.3s ease; flex-shrink: 0; z-index: 10;
         }
         .sidebar.collapsed { width: var(--sidebar-collapsed); }
-        .sidebar.collapsed .sb-text, .sidebar.collapsed .search-box, .sidebar.collapsed .c-info { display: none; }
+        .sidebar.collapsed .sb-text, .sidebar.collapsed .search-box, .sidebar.collapsed .c-info, .sidebar.collapsed .btn-label { display: none; }
         .sidebar.collapsed .c-avatar { display: block; margin: 0 auto; }
         
         .sb-header { padding: 12px; background: var(--primary); color: white; display: flex; justify-content: space-between; align-items: center; }
         .toggle-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2rem; }
-
         .search-box { padding: 10px; border-bottom: 1px solid #eee; }
         .search-box input { width: 100%; padding: 6px; box-sizing: border-box; }
         
@@ -39,22 +33,28 @@
         .c-item { padding: 10px 15px; border-bottom: 1px solid #f9f9f9; cursor: pointer; display: flex; align-items: center; height: 45px; }
         .c-item:hover { background: #e3f2fd; }
         .c-item.active { background: #bbdefb; border-left: 4px solid var(--accent); }
-        
         .c-avatar { display: none; width: 32px; height: 32px; background: #eee; border-radius: 50%; text-align: center; line-height: 32px; color: #555; font-weight: bold; }
 
-        /* --- 2. 主內容 --- */
+        /* 側邊欄底部按鈕區 */
+        .sb-footer { padding: 10px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 5px; }
+        .sb-btn { 
+            width: 100%; padding: 8px; border: none; font-weight: bold; cursor: pointer; 
+            border-radius: 4px; text-align: left; display: flex; align-items: center; gap: 8px;
+        }
+        .btn-add { background: #e3f2fd; color: #1565c0; }
+        .btn-import { background: #e8f5e9; color: #2e7d32; }
+        .btn-import:hover { background: #c8e6c9; }
+
+        /* 主內容 */
         .main { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; position: relative; }
         
-        /* 頂部工具列 */
         .header-bar { background: white; padding: 10px 15px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .header-left { display: flex; gap: 15px; align-items: center; }
-        .btn-clone { background: #ff9800; color: white; border: none; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 5px; }
-        .btn-clone:hover { background: #f57c00; }
+        .header-left { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .btn-clone { background: #ff9800; color: white; border: none; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; }
 
-        /* 歡迎/空狀態 */
         .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #999; }
 
-        /* --- 3. 矩陣設定 --- */
+        /* 矩陣設定 */
         .config-card { background: white; border-radius: 6px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
         .matrix-table th { background: #fafafa; padding: 6px; border: 1px solid #eee; color: #666; }
@@ -67,46 +67,31 @@
         }
         .t-btn.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: bold; }
 
-        /* 快速模組 */
         .pt-row { display: flex; gap: 5px; flex-wrap: wrap; }
         .pt-btn { font-size: 0.75rem; padding: 4px 10px; background: #e0f2f1; color: #00695c; border-radius: 12px; cursor: pointer; border: 1px solid #b2dfdb; }
 
-        /* --- 4. 日曆 (優化版) --- */
+        /* 日曆 */
         .cal-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
         .cal-card { background: white; border-radius: 6px; padding: 8px; border-top: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .cal-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 0.9rem; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 1px solid #eee; }
-        
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
         .cal-head { font-size: 0.75rem; text-align: center; color: #aaa; }
-        
-        /* 日曆格子 (重點修改) */
-        .cal-cell { 
-            aspect-ratio: 1; border: 1px solid #f5f5f5; position: relative; cursor: pointer; border-radius: 3px;
-        }
-        .date-num { 
-            position: absolute; top: 2px; left: 3px; font-size: 0.7rem; color: #666; font-weight: bold; 
-        }
-        
-        /* 配送內容標籤 (獨立顯示) */
+        .cal-cell { aspect-ratio: 1; border: 1px solid #f5f5f5; position: relative; cursor: pointer; border-radius: 3px; }
+        .date-num { position: absolute; top: 2px; left: 3px; font-size: 0.7rem; color: #666; font-weight: bold; }
         .content-badge {
             position: absolute; bottom: 2px; right: 2px; left: 2px;
             background: rgba(255,255,255,0.9); border: 1px solid #ddd;
             border-radius: 3px; font-size: 0.75rem; text-align: center;
             color: #333; font-weight: bold; padding: 1px 0;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         
-        /* 狀態背景 */
-        .st-normal { background: #c8e6c9; }  /* 綠: 正常 */
-        .st-paused { background: #ffcdd2; }  /* 紅: 暫停 */
-        .st-missed { background: #fff9c4; border: 1px solid #fbc02d; } /* 黃: 未達 */
-        .st-holiday { background: #f5f5f5; } /* 灰: 假日休 */
-
-        /* 狀態文字修飾 */
+        .st-normal { background: #c8e6c9; }
+        .st-paused { background: #ffcdd2; }
+        .st-missed { background: #fff9c4; border: 1px solid #fbc02d; }
+        .st-holiday { background: #f5f5f5; }
         .st-paused .content-badge { text-decoration: line-through; color: #c62828; opacity: 0.7; }
-        .st-holiday .content-badge { color: #ccc; }
 
-        /* 儲存按鈕群 */
+        /* 浮動按鈕 */
         .fab-group { position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; gap: 10px; align-items: end; }
         .fab-btn { 
             padding: 12px 20px; border-radius: 30px; border: none; color: white; 
@@ -116,6 +101,13 @@
         .fab-btn:active { transform: scale(0.95); }
         .btn-save { background: #4caf50; }
         .btn-save-exit { background: #2c3e50; }
+
+        /* 匯入遮罩 */
+        #importModal {
+            position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); 
+            display:none; justify-content:center; align-items:center; z-index:100;
+        }
+        .modal-box { background:white; padding:20px; border-radius:8px; text-align:center; width:300px; }
 
     </style>
 </head>
@@ -132,30 +124,33 @@
     <ul class="c-list" id="customerList">
         <li style="padding:15px; text-align:center; color:#999; font-size:0.8rem;">載入中...</li>
     </ul>
-    <div style="padding:10px; border-top:1px solid #eee;">
-        <button onclick="resetForm(true)" style="width:100%; padding:8px; background:#e3f2fd; border:none; color:#1565c0; font-weight:bold; cursor:pointer;">+ 新增空白客戶</button>
+    <div class="sb-footer">
+        <button class="sb-btn btn-add" onclick="resetForm(true)">
+            <span>+</span> <span class="btn-label">新增空白客戶</span>
+        </button>
+        <button class="sb-btn btn-import" onclick="document.getElementById('csvInput').click()">
+            <span>📂</span> <span class="btn-label">匯入舊資料 (CSV)</span>
+        </button>
+        <input type="file" id="csvInput" accept=".csv" style="display:none">
     </div>
 </nav>
 
 <main class="main">
     <div id="emptyState" class="empty-state">
-        <h2>👋 歡迎使用</h2>
-        <p>請從左側選擇客戶，或點擊新增。</p>
-        <p style="font-size:0.8rem; color:#bbb;">資料已清空，避免誤操作</p>
+        <h2>👋 歡迎使用 V10</h2>
+        <p>請從左側選擇客戶，或匯入資料。</p>
+        <p style="font-size:0.8rem; color:#bbb;">資料已清空，安全無虞</p>
     </div>
 
     <div id="workspace" style="display:none; flex-direction:column; gap:15px;">
-        
         <div class="header-bar">
             <div class="header-left">
                 <input type="text" id="inpName" placeholder="客戶姓名" style="font-size:1.1rem; font-weight:bold; width:100px; border:none; border-bottom:1px solid #ccc;">
-                <input type="text" id="inpPhone" placeholder="電話" style="width:100px; border:1px solid #eee; padding:3px;">
-                <input type="text" id="inpAddr" placeholder="地址" style="flex:1; border:1px solid #eee; padding:3px;">
+                <input type="text" id="inpPhone" placeholder="電話" style="width:120px; border:1px solid #eee; padding:3px;">
+                <input type="text" id="inpAddr" placeholder="地址" style="flex:1; border:1px solid #eee; padding:3px; min-width: 150px;">
                 <label style="font-size:0.85rem;">$ <input type="number" id="inpPrice" value="35" style="width:40px;"></label>
             </div>
-            <button class="btn-clone" onclick="cloneCustomer()">
-                📑 複製此訂單
-            </button>
+            <button class="btn-clone" onclick="cloneCustomer()">📑 複製此單</button>
         </div>
 
         <div class="config-card">
@@ -163,36 +158,39 @@
                 <div class="pt-row" id="patternBox"></div>
                 <label style="font-size:0.85rem;"><input type="checkbox" id="chkHoliday"> 見紅不休</label>
             </div>
-            
             <table class="matrix-table">
                 <thead>
-                    <tr>
-                        <th style="width:40px;"></th>
-                        <th>原味 (1,2,4,6)</th>
-                        <th>甜味 (1,2)</th>
-                        <th>巧克力 (1,2)</th>
-                        <th>草莓 (1,2)</th>
-                        <th>黑糖 (1,2)</th>
-                    </tr>
+                    <tr><th style="width:40px;"></th><th>原味 (1,2,4,6)</th><th>甜味 (1,2)</th><th>巧克力 (1,2)</th><th>草莓 (1,2)</th><th>黑糖 (1,2)</th></tr>
                 </thead>
                 <tbody id="matrixBody"></tbody>
             </table>
         </div>
 
         <div class="cal-wrapper" id="calendarGrid"></div>
-
-        <div style="height:60px;"></div> </div>
+        <div style="height:60px;"></div>
+    </div>
 </main>
 
 <div class="fab-group" id="fabGroup" style="display:none;">
     <button class="fab-btn btn-save" onclick="saveData(false)">💾 僅儲存</button>
-    <button class="fab-btn btn-save-exit" onclick="saveData(true)">💾 儲存並結束 (清空)</button>
+    <button class="fab-btn btn-save-exit" onclick="saveData(true)">💾 儲存並結束</button>
+</div>
+
+<div id="importModal">
+    <div class="modal-box">
+        <h3>資料匯入中...</h3>
+        <p id="importStatus" style="color:#666; margin:10px 0;">正在解析...</p>
+        <div style="width:100%; background:#eee; height:5px; border-radius:3px; overflow:hidden;">
+            <div id="progressBar" style="width:0%; background:var(--accent); height:100%; transition: width 0.3s;"></div>
+        </div>
+    </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+    // Firebase 設定
     const firebaseConfig = {
         apiKey: "AIzaSyALj-w6MSC_5CgGCVUVFveoV8-ykRxcu24",
         authDomain: "crm-1225-003.firebaseapp.com",
@@ -204,71 +202,53 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const COL = "customers_v9_perfect";
+    const COL = "customers_v10_import"; // 升級為 V10
 
-    // --- 資料常數 ---
+    // 常數
     const FLAVORS = ["原味", "甜味", "巧克力", "草莓", "黑糖"];
     const DAYS = ["日","一","二","三","四","五","六"];
-    const PATTERNS = [
-        {l:"平日",d:[1,2,3,4,5]},{l:"每天",d:[0,1,2,3,4,5,6]},{l:"一三五",d:[1,3,5]},{l:"二四六",d:[2,4,6]}
-    ];
-    // 國定假日 (簡化)
+    const PATTERNS = [{l:"平日",d:[1,2,3,4,5]},{l:"每天",d:[0,1,2,3,4,5,6]},{l:"一三五",d:[1,3,5]},{l:"二四六",d:[2,4,6]}];
     const HOLIDAYS = {"2025-12-25":"聖誕","2026-1-1":"元旦","2026-2-17":"除夕","2026-2-28":"228"};
 
     let currentId = null;
     let currentMatrix = {};
     let manualOverrides = {}; 
-    let startMonth = new Date(2025, 11, 1); // 2025/12
+    let startMonth = new Date(2025, 11, 1);
 
-    // --- 初始化 UI ---
-    
-    // 生成模組按鈕
+    // --- UI Init ---
     const ptBox = document.getElementById('patternBox');
     PATTERNS.forEach(p => {
         const btn = document.createElement('div');
-        btn.className = 'pt-btn';
-        btn.textContent = p.l;
-        btn.onclick = () => applyPattern(p.d);
+        btn.className = 'pt-btn'; btn.textContent = p.l; btn.onclick=()=>applyPattern(p.d);
         ptBox.appendChild(btn);
     });
 
-    // 生成矩陣
     const mxBody = document.getElementById('matrixBody');
-    const ROW_ORDER = [1,2,3,4,5,6,0];
-    ROW_ORDER.forEach(dIdx => {
+    [1,2,3,4,5,6,0].forEach(dIdx => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td style="font-weight:bold; color:${dIdx===0||dIdx===6?'red':'#333'}">${DAYS[dIdx]}</td>`;
-        
         FLAVORS.forEach(f => {
             const key = `${dIdx}_${f}`;
             const td = document.createElement('td');
             const opts = (f === "原味") ? [1,2,4,6] : [1,2];
             let html = "";
-            opts.forEach(v => {
-                html += `<span class="t-btn" data-key="${key}" data-val="${v}" onclick="toggleMatrix(this)">${v}</span>`;
-            });
+            opts.forEach(v => html += `<span class="t-btn" data-key="${key}" data-val="${v}" onclick="toggleMatrix(this)">${v}</span>`);
             td.innerHTML = html;
             tr.appendChild(td);
         });
         mxBody.appendChild(tr);
     });
 
-    // --- 邏輯函數 ---
-
+    // --- Logic ---
     window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('collapsed');
 
     window.toggleMatrix = (el) => {
         const key = el.dataset.key;
         const val = parseInt(el.dataset.val);
         const active = el.classList.contains('active');
-        
         document.querySelectorAll(`.t-btn[data-key="${key}"]`).forEach(b => b.classList.remove('active'));
-        
         if(active) delete currentMatrix[key];
-        else {
-            el.classList.add('active');
-            currentMatrix[key] = val;
-        }
+        else { el.classList.add('active'); currentMatrix[key] = val; }
         renderCal();
     };
 
@@ -276,18 +256,16 @@
         document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
         currentMatrix = {};
         days.forEach(d => {
-            const k = `${d}_原味`;
-            currentMatrix[k] = 1;
+            const k = `${d}_原味`; currentMatrix[k] = 1;
             const b = document.querySelector(`.t-btn[data-key="${k}"][data-val="1"]`);
             if(b) b.classList.add('active');
         });
         renderCal();
     }
 
-    // 狀態循環
     window.cycleState = (dateStr) => {
         let st = manualOverrides[dateStr] || 0;
-        st = (st + 1) % 3; // 0->1->2->0
+        st = (st + 1) % 3;
         if(st === 0) delete manualOverrides[dateStr];
         else manualOverrides[dateStr] = st;
         renderCal();
@@ -299,119 +277,74 @@
         const price = parseInt(document.getElementById('inpPrice').value) || 35;
         const doHol = document.getElementById('chkHoliday').checked;
 
-        for(let i=0; i<6; i++) { // 6個月
+        for(let i=0; i<6; i++) {
             const viewD = new Date(startMonth.getFullYear(), startMonth.getMonth()+i, 1);
             const y = viewD.getFullYear();
             const m = viewD.getMonth();
             const dim = new Date(y, m+1, 0).getDate();
             const fd = new Date(y, m, 1).getDay();
+            let mQty = 0; let cells = "";
+            for(let k=0; k<fd; k++) cells += `<div></div>`;
 
-            let mQty = 0;
-            let cellsHtml = "";
-            
-            // 空格
-            for(let k=0; k<fd; k++) cellsHtml += `<div></div>`;
-
-            // 日期
             for(let d=1; d<=dim; d++) {
                 const dateStr = `${y}-${m+1}-${d}`;
                 const dw = new Date(y,m,d).getDay();
                 const isHol = HOLIDAYS[dateStr];
-
-                // 計算量
-                let bQty = 0;
-                let txt = "";
+                
+                let bQty = 0; let txt = "";
                 FLAVORS.forEach(f => {
                     const q = currentMatrix[`${dw}_${f}`];
                     if(q) { bQty += q; txt += (f==="原味"?"原":f[0]) + q + " "; }
                 });
 
-                // 狀態
-                let st = "st-none";
-                let fQty = bQty;
-                const ovr = manualOverrides[dateStr];
-
-                if(isHol && !doHol) {
-                    st = "st-holiday"; fQty = 0;
-                } else if(ovr === 1) { // 暫停
-                    st = "st-paused"; fQty = 0;
-                } else if(ovr === 2) { // 未達
-                    st = "st-missed"; fQty = 0;
-                } else if(bQty > 0) {
-                    st = "st-normal";
-                }
-
+                let st = "st-none"; let fQty = bQty; const ovr = manualOverrides[dateStr];
+                if(isHol && !doHol) { st="st-holiday"; fQty=0; }
+                else if(ovr === 1) { st="st-paused"; fQty=0; }
+                else if(ovr === 2) { st="st-missed"; fQty=0; }
+                else if(bQty > 0) st="st-normal";
                 mQty += fQty;
 
-                // 格子 HTML (優化版)
                 let inner = `<span class="date-num">${d}</span>`;
                 if(isHol) inner += `<span style="font-size:0.6rem;color:red;position:absolute;top:2px;right:2px;">${isHol}</span>`;
-                
-                if(bQty > 0 || ovr > 0) {
-                    inner += `<div class="content-badge">${txt}</div>`;
-                }
-
-                cellsHtml += `<div class="cal-cell ${st}" onclick="cycleState('${dateStr}')">${inner}</div>`;
+                if(bQty > 0 || ovr > 0) inner += `<div class="content-badge">${txt}</div>`;
+                cells += `<div class="cal-cell ${st}" onclick="cycleState('${dateStr}')">${inner}</div>`;
             }
 
             const card = document.createElement('div');
             card.className = "cal-card";
-            card.innerHTML = `
-                <div class="cal-header">
-                    <span>${y}/${m+1}</span>
-                    <span style="color:var(--accent)">${mQty}瓶 | $${mQty*price}</span>
-                </div>
-                <div class="cal-grid">
-                    <div class="cal-head">日</div><div class="cal-head">一</div><div class="cal-head">二</div>
-                    <div class="cal-head">三</div><div class="cal-head">四</div><div class="cal-head">五</div><div class="cal-head">六</div>
-                    ${cellsHtml}
-                </div>
-            `;
+            card.innerHTML = `<div class="cal-header"><span>${y}/${m+1}</span><span style="color:var(--accent)">${mQty}瓶 | $${mQty*price}</span></div><div class="cal-grid"><div class="cal-head">日</div><div class="cal-head">一</div><div class="cal-head">二</div><div class="cal-head">三</div><div class="cal-head">四</div><div class="cal-head">五</div><div class="cal-head">六</div>${cells}</div>`;
             grid.appendChild(card);
         }
     }
 
-    // --- 功能操作 ---
-
-    // 清空/新增
+    // --- CRUD ---
     window.resetForm = (isNew) => {
         currentId = null;
         document.getElementById('emptyState').style.display = 'none';
         document.getElementById('workspace').style.display = 'flex';
         document.getElementById('fabGroup').style.display = 'flex';
-        
-        // 清空欄位
         document.getElementById('inpName').value = "";
         document.getElementById('inpPhone').value = "";
         document.getElementById('inpAddr').value = "";
         document.getElementById('inpPrice').value = 35;
         document.getElementById('chkHoliday').checked = false;
-        
-        currentMatrix = {};
-        manualOverrides = {};
-        
+        currentMatrix = {}; manualOverrides = {};
         document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.c-item').forEach(e => e.classList.remove('active'));
-        
         renderCal();
         if(isNew) document.getElementById('inpName').focus();
     };
 
-    // 載入
     function loadCustomer(id, data) {
         resetForm(false);
         currentId = id;
-        
         document.getElementById('inpName').value = data.name;
         document.getElementById('inpPhone').value = data.phone;
         document.getElementById('inpAddr').value = data.address;
         document.getElementById('inpPrice').value = data.unitPrice;
         document.getElementById('chkHoliday').checked = data.holidayDeliver;
-        
         currentMatrix = data.matrix || {};
         manualOverrides = data.manualOverrides || {};
-        
-        // 還原按鈕
         Object.keys(currentMatrix).forEach(k => {
             const v = currentMatrix[k];
             const btn = document.querySelector(`.t-btn[data-key="${k}"][data-val="${v}"]`);
@@ -420,89 +353,139 @@
         renderCal();
     }
 
-    // 複製 (Clone)
     window.cloneCustomer = async () => {
-        if(!currentId) return alert("請先選擇要複製的客戶");
-        
-        const newName = prompt("請輸入新客戶的姓名 (將複製排程設定):", document.getElementById('inpName').value + " (複製)");
+        if(!currentId) return alert("請先選擇客戶");
+        const newName = prompt("新客戶姓名:", document.getElementById('inpName').value + "(複製)");
         if(!newName) return;
-
-        // 建立新資料 (不複製 overrides 歷史)
         const newData = {
-            name: newName,
-            phone: "", // 電話清空
-            address: document.getElementById('inpAddr').value, // 地址保留(可能同住)
+            name: newName, phone: "", address: document.getElementById('inpAddr').value,
             unitPrice: parseInt(document.getElementById('inpPrice').value),
             holidayDeliver: document.getElementById('chkHoliday').checked,
-            matrix: currentMatrix, // 複製矩陣
-            manualOverrides: {}, // 清空歷史
-            updatedAt: serverTimestamp()
+            matrix: currentMatrix, manualOverrides: {}, updatedAt: serverTimestamp()
         };
-
         const ref = await addDoc(collection(db, COL), newData);
-        // 載入新客戶
         loadCustomer(ref.id, newData);
-        alert(`已複製為新客戶: ${newName}`);
+        alert(`已複製為: ${newName}`);
     };
 
-    // 儲存
     window.saveData = async (shouldExit) => {
         const name = document.getElementById('inpName').value;
         if(!name) return alert("請輸入姓名");
-
         const payload = {
-            name: name,
-            phone: document.getElementById('inpPhone').value,
+            name: name, phone: document.getElementById('inpPhone').value,
             address: document.getElementById('inpAddr').value,
             unitPrice: parseInt(document.getElementById('inpPrice').value),
             holidayDeliver: document.getElementById('chkHoliday').checked,
-            matrix: currentMatrix,
-            manualOverrides: manualOverrides,
-            updatedAt: serverTimestamp()
+            matrix: currentMatrix, manualOverrides: manualOverrides, updatedAt: serverTimestamp()
         };
-
-        if(currentId) {
-            await updateDoc(doc(db, COL, currentId), payload);
-        } else {
-            const ref = await addDoc(collection(db, COL), payload);
-            currentId = ref.id;
-        }
+        if(currentId) await updateDoc(doc(db, COL, currentId), payload);
+        else await addDoc(collection(db, COL), payload);
 
         if(shouldExit) {
-            // 儲存並結束 -> 回到空狀態
             document.getElementById('workspace').style.display = 'none';
             document.getElementById('fabGroup').style.display = 'none';
             document.getElementById('emptyState').style.display = 'block';
             currentId = null;
-            alert("✅ 儲存成功，畫面已清空");
+            alert("✅ 儲存並清除畫面");
         } else {
             alert("✅ 儲存成功");
         }
     };
 
-    // Firebase List
     onSnapshot(query(collection(db, COL), orderBy("updatedAt", "desc")), (snap) => {
-        const list = document.getElementById('customerList');
-        list.innerHTML = "";
+        const list = document.getElementById('customerList'); list.innerHTML = "";
         snap.forEach(d => {
             const c = d.data();
             const li = document.createElement('li');
             li.className = `c-item ${d.id===currentId?'active':''}`;
-            li.innerHTML = `
-                <div class="c-avatar">${c.name[0]}</div>
-                <div class="c-info" style="margin-left:10px; flex:1;">
-                    <div style="font-weight:bold; font-size:0.95rem;">${c.name}</div>
-                    <div style="color:#888; font-size:0.8rem;">${c.phone||'-'}</div>
-                </div>
-            `;
+            li.innerHTML = `<div class="c-avatar">${c.name[0]}</div><div class="c-info" style="margin-left:10px;flex:1;"><div style="font-weight:bold;font-size:0.95rem;">${c.name}</div><div style="color:#888;font-size:0.8rem;">${c.phone||'-'}</div></div>`;
             li.onclick = () => loadCustomer(d.id, c);
             list.appendChild(li);
         });
     });
     
-    // 監聽重算
     document.getElementById('inpPrice').addEventListener('input', renderCal);
     document.getElementById('chkHoliday').addEventListener('change', renderCal);
+
+    // --- CSV Import Engine ---
+    document.getElementById('csvInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            const text = evt.target.result;
+            const rows = text.split(/\r?\n/);
+            
+            // 簡易解析 CSV (假設沒有引號包覆的逗號)
+            const headers = rows[0].split(',').map(h => h.trim());
+            const dataIdx = {
+                name: headers.indexOf("姓名"),
+                phone: headers.indexOf("電話"),
+                addr: headers.indexOf("地址"),
+                price: headers.indexOf("單價"),
+                hol: headers.indexOf("見紅不休"),
+                days: [headers.indexOf("週日"), headers.indexOf("週一"), headers.indexOf("週二"), headers.indexOf("週三"), headers.indexOf("週四"), headers.indexOf("週五"), headers.indexOf("週六")]
+            };
+
+            if(dataIdx.name === -1) return alert("錯誤：CSV 找不到 '姓名' 欄位，請檢查標題列。");
+
+            // UI 顯示匯入中
+            document.getElementById('importModal').style.display = 'flex';
+            const status = document.getElementById('importStatus');
+            const bar = document.getElementById('progressBar');
+            
+            let count = 0;
+            const total = rows.length - 1;
+            const batchSize = 400; // Firestore batch limit 500
+            
+            // 處理資料
+            for (let i = 1; i < rows.length; i++) {
+                if(!rows[i].trim()) continue;
+                const cols = rows[i].split(',').map(c => c.trim());
+                
+                // 解析每日內容
+                const matrix = {};
+                dataIdx.days.forEach((colIdx, dayIdx) => { // dayIdx: 0=Sun ... 6=Sat
+                    if(colIdx > -1 && cols[colIdx]) {
+                        // 格式: "原味2,草莓1"
+                        const items = cols[colIdx].split(/[,，]/);
+                        items.forEach(item => {
+                            const match = item.match(/([\u4e00-\u9fa5]+)(\d+)/); // 抓中文+數字
+                            if(match) {
+                                const flavor = match[1]; // 原味
+                                const qty = parseInt(match[2]);
+                                matrix[`${dayIdx}_${flavor}`] = qty;
+                            }
+                        });
+                    }
+                });
+
+                const docData = {
+                    name: cols[dataIdx.name],
+                    phone: dataIdx.phone > -1 ? cols[dataIdx.phone] : "",
+                    address: dataIdx.addr > -1 ? cols[dataIdx.addr] : "",
+                    unitPrice: dataIdx.price > -1 ? (parseInt(cols[dataIdx.price]) || 35) : 35,
+                    holidayDeliver: dataIdx.hol > -1 ? (cols[dataIdx.hol] === "TRUE" || cols[dataIdx.hol] === "是") : false,
+                    matrix: matrix,
+                    manualOverrides: {},
+                    updatedAt: serverTimestamp()
+                };
+
+                // 寫入 Firestore (單筆寫入，若量大建議改用 Batch)
+                await addDoc(collection(db, COL), docData);
+                
+                count++;
+                const pct = Math.round((count / total) * 100);
+                bar.style.width = pct + "%";
+                status.textContent = `匯入中... (${count}/${total})`;
+            }
+
+            document.getElementById('importModal').style.display = 'none';
+            alert(`匯入完成！共新增 ${count} 筆客戶。`);
+        };
+        reader.readAsText(file);
+    });
 
 </script>
 </body>

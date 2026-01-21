@@ -2,929 +2,787 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>羊奶中控系統 V16.2 (ERP 完整版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>五寮尖羊奶 CRM - 旗艦整合版</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"M PLUS Rounded 1c"', '"Noto Sans TC"', 'sans-serif'],
+                        mono: ['"Roboto Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: { dark: '#1e293b', light: '#f8fafc', accent: '#10b981' }
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
-        :root {
-            --sidebar-width: 260px;
-            --primary: #2c3e50;
-            --accent: #8e44ad; /* 紫色系 */
-            --bg: #f0f2f5;
-            --border: #e0e0e0;
-            --group-bg: #f3e5f5;
-            --success: #27ae60;
-            --danger: #c0392b;
-            --warning: #f39c12;
-        }
-        body { font-family: "Microsoft JhengHei", sans-serif; margin: 0; background: var(--bg); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-
-        /* --- Hub Navigation (Top Bar) --- */
-        .hub-nav {
-            background: var(--primary); color: white; padding: 0 20px; height: 50px;
-            display: flex; align-items: center; gap: 20px; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        .hub-title { font-weight: bold; font-size: 1.1rem; margin-right: 20px; letter-spacing: 1px; }
-        .hub-btn {
-            background: transparent; border: none; color: #b0bec5; padding: 0 15px; height: 50px;
-            cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: all 0.2s; border-bottom: 3px solid transparent;
-        }
-        .hub-btn:hover { color: white; background: rgba(255,255,255,0.1); }
-        .hub-btn.active { color: white; border-bottom: 3px solid var(--accent); background: rgba(0,0,0,0.2); }
-
-        /* --- Layout Container --- */
-        .app-container { flex: 1; display: flex; overflow: hidden; position: relative; }
+        body { background-color: #f1f5f9; color: #334155; overflow: hidden; }
+        [v-cloak] { display: none; }
         
-        /* Views */
-        .view-section { display: none; width: 100%; height: 100%; overflow: hidden; }
-        .view-section.active { display: flex; }
+        /* Custom Scrollbar */
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .custom-scroll:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
 
-        /* --- View A: Operations (V15 Layout) --- */
-        .sidebar {
-            width: var(--sidebar-width); background: white; border-right: 1px solid var(--border);
-            display: flex; flex-direction: column; transition: width 0.3s ease; flex-shrink: 0; z-index: 10;
-        }
-        .sidebar.collapsed { width: 50px; }
+        /* Animation */
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
         
-        .c-list { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        .addr-header { background: var(--group-bg); color: #4a148c; padding: 4px 10px; font-size: 0.75rem; font-weight: bold; position: sticky; top: 0; border-bottom: 1px solid #e1bee7; }
-        .c-item { padding: 8px 10px 8px 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px dashed #f5f5f5; font-size: 0.8rem; }
-        .c-item:hover { background: #f3e5f5; }
-        .c-item.active { background: #e1bee7; border-left: 4px solid var(--accent); font-weight: bold; }
-        .c-item.suspended { text-decoration: line-through; color: #999; background: #eee; }
+        .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
+        .slide-enter-from, .slide-leave-to { transform: translateX(100%); }
 
-        .workspace { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
-        
-        /* Header & Inputs */
-        .header-container { background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; }
-        .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        input, select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-        .sector-select { background: #f3e5f5; color: #4a148c; font-weight: bold; }
-        
-        /* Billing Accordion */
-        .billing-accordion { border: 1px solid #ddd; border-radius: 6px; overflow: hidden; background: white; margin-bottom: 5px; }
-        .billing-summary { background: #f8f9fa; padding: 10px; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-        .billing-content { padding: 15px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 10px; }
-        .bill-stat-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
-
-        /* Calendar Matrix */
-        .cal-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
-        .cal-card { background: white; border-radius: 6px; padding: 8px; border-top: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-top: 5px; }
-        .cal-cell { aspect-ratio: 1; border: 1px solid #f5f5f5; position: relative; cursor: pointer; border-radius: 3px; font-size: 0.7rem; }
-        .st-normal { background: #d1c4e9; }
-        .st-holiday { background: #f5f5f5; }
-        .st-paused { background: #ffcdd2; }
-        .content-badge { position: absolute; bottom: 1px; right: 1px; left: 1px; background: rgba(255,255,255,0.9); font-size: 0.6rem; text-align: center; border: 1px solid #ddd; }
-        .suspend-overlay { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; background: rgba(255,255,255,0.7); font-weight: bold; color: #c0392b; transform: rotate(-15deg); pointer-events: none; }
-
-        /* --- View B: Finance --- */
-        .finance-layout { padding: 20px; display: flex; gap: 20px; height: 100%; box-sizing: border-box; }
-        .finance-panel { flex: 1; background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
-        .log-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .log-table th { text-align: left; background: #f1f2f6; padding: 8px; position: sticky; top: 0; }
-        .log-table td { border-bottom: 1px solid #eee; padding: 8px; }
-        
-        /* --- View C: Production --- */
-        .prod-layout { padding: 20px; display: flex; flex-direction: column; gap: 20px; height: 100%; overflow-y: auto; box-sizing: border-box; }
-        .harvest-controls { display: flex; gap: 15px; background: white; padding: 15px; border-radius: 8px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .prod-matrix { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: white; }
-        .prod-matrix th, .prod-matrix td { border: 1px solid #ddd; padding: 8px; text-align: center; vertical-align: middle; }
-        .prod-matrix th { background: #2c3e50; color: white; }
-        .gap-pos { color: var(--success); font-weight: bold; }
-        .gap-neg { color: var(--danger); font-weight: bold; }
-        .flavor-detail { font-size: 0.75rem; color: #666; display: block; margin-top: 4px; line-height: 1.2; }
-
-        /* --- View D: Settings --- */
-        .settings-layout { padding: 20px; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-        .setting-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .prod-list-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
-
-        /* Buttons & Footer */
-        .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: white; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-primary { background: var(--primary); }
-        .btn-accent { background: var(--accent); }
-        .btn-danger { background: var(--danger); }
-        .btn-success { background: var(--success); }
-        .btn-warning { background: var(--warning); }
-        
-        .sb-footer { padding: 10px; border-top: 1px solid #eee; display: flex; flex-direction: column; gap: 5px; background: #fff; margin-top: auto; }
-        .btn-io { width: 100%; background: #ecf0f1; color: #555; font-size: 0.75rem; justify-content: center; }
-        .btn-io:hover { background: #d0d3d4; }
-        
-        /* Float Button */
-        .fab { position: fixed; bottom: 30px; right: 30px; width: 50px; height: 50px; border-radius: 50%; background: var(--accent); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; z-index: 100; }
-
-        /* Import Modal */
-        #loadingModal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 999; }
-        .loading-box { background: white; padding: 20px; border-radius: 8px; text-align: center; width: 300px; }
-
+        /* Status Colors */
+        .status-dot { @apply w-2 h-2 rounded-full; }
+        .type-morning { @apply bg-orange-500; }
+        .type-family { @apply bg-pink-500; }
+        .type-group { @apply bg-purple-500; }
     </style>
 </head>
-<body>
+<body class="h-screen w-screen flex text-slate-800">
 
-<nav class="hub-nav">
-    <div class="hub-title">🐐 羊奶中控 V16.2</div>
-    <button class="hub-btn active" onclick="switchView('ops')">📦 營運與配送</button>
-    <button class="hub-btn" onclick="switchView('finance')">💰 財務與日誌</button>
-    <button class="hub-btn" onclick="switchView('prod')">🥛 產能與庫存</button>
-    <button class="hub-btn" onclick="switchView('settings')">⚙️ 設定與產品</button>
-</nav>
+<div id="app" v-cloak class="flex h-full w-full">
 
-<div class="app-container">
+    <aside class="w-[72px] bg-slate-900 flex flex-col items-center py-6 shadow-xl z-30 flex-shrink-0 relative">
+        <div class="mb-8 w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-emerald-500/30">
+            五
+        </div>
 
-    <div id="view-ops" class="view-section active">
-        <aside class="sidebar" id="sidebar">
-            <div style="padding:10px; border-bottom:1px solid #eee; display:flex;">
-                <input type="text" id="searchInput" placeholder="搜尋姓名/地址..." style="width:100%" oninput="filterList()">
-            </div>
-            <ul class="c-list" id="customerList">
-                <li style="padding:15px; text-align:center; color:#999;">載入中...</li>
-            </ul>
-            <div class="sb-footer">
-                <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="resetForm(true)">+ 新增客戶</button>
-                <div style="display:flex; gap:5px;">
-                    <button class="btn btn-io" onclick="document.getElementById('csvInput').click()">📂 匯入</button>
-                    <button class="btn btn-io" onclick="exportCSV()">💾 匯出</button>
-                </div>
-                <input type="file" id="csvInput" accept=".csv" style="display:none">
-            </div>
-        </aside>
+        <nav class="flex-1 flex flex-col gap-4 w-full items-center">
+            <button @click="currentView = 'kanban'" :class="currentView === 'kanban' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'" class="w-10 h-10 rounded-xl flex items-center justify-center transition-all tooltip-container group relative">
+                <i class="fas fa-columns text-lg"></i>
+                <span class="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50 pointer-events-none">看板模式</span>
+            </button>
+
+            <button @click="triggerImport" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-all group relative">
+                <i class="fas fa-file-import text-lg"></i>
+                <span class="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50 pointer-events-none">匯入 JSON</span>
+            </button>
+            <input type="file" ref="fileInput" class="hidden" @change="handleImport" accept=".json">
+
+            <button @click="exportData" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-all group relative">
+                <i class="fas fa-download text-lg"></i>
+                <span class="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50 pointer-events-none">備份資料</span>
+            </button>
+            
+            <button @click="settingsModal.show = true" class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white transition-all group relative mt-auto mb-4">
+                <i class="fas fa-cog text-lg"></i>
+                <span class="absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition whitespace-nowrap z-50 pointer-events-none">系統設定</span>
+            </button>
+        </nav>
+
+        <div class="mt-4 flex flex-col items-center gap-1">
+            <div class="w-2.5 h-2.5 rounded-full transition-colors duration-500" :class="isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500'"></div>
+            <span class="text-[9px] text-slate-500">{{ isConnected ? 'Online' : 'Offline' }}</span>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col min-w-0 bg-slate-100 relative h-full overflow-hidden">
         
-        <main class="workspace">
-            <div id="emptyState" style="text-align:center; color:#999; margin-top:100px;">
-                <h3>👋 請選擇左側客戶進行編輯</h3>
+        <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm z-20">
+            <div class="flex items-center gap-6 flex-1">
+                <h1 class="text-xl font-bold text-slate-700 tracking-tight">訂單管理系統 <span class="text-xs text-slate-400 font-normal ml-2">v4.0 Integrated</span></h1>
+                
+                <div class="relative group">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition"></i>
+                    <input type="text" v-model="searchQuery" placeholder="搜尋 姓名 / 地區..." 
+                        class="pl-9 pr-4 py-2 rounded-full bg-slate-100 border-none focus:bg-white focus:ring-2 focus:ring-emerald-500 w-64 text-sm transition-all shadow-inner">
+                </div>
+
+                <div class="hidden md:flex gap-1 bg-slate-100 p-1 rounded-lg">
+                    <label v-for="st in statusOptions" :key="st" class="cursor-pointer">
+                        <input type="checkbox" :value="st" v-model="filterStatus" class="hidden peer">
+                        <span class="px-3 py-1.5 rounded-md text-xs font-bold text-slate-500 transition hover:bg-white hover:shadow-sm peer-checked:bg-white peer-checked:text-slate-800 peer-checked:shadow peer-checked:ring-1 peer-checked:ring-slate-200 select-none block">
+                            {{ st }}
+                        </span>
+                    </label>
+                </div>
             </div>
 
-            <div id="opsWorkspace" style="display:none; flex-direction:column; gap:15px;">
-                <div class="header-container">
-                    <div class="row">
-                        <select id="inpSector" class="sector-select" style="width:100px"></select>
-                        <input id="inpName" placeholder="姓名" style="width:100px; font-weight:bold;">
-                        <input id="inpPhone" placeholder="電話" style="width:120px;">
-                        <input id="inpAddr" placeholder="地址" style="flex:1;">
-                        <input id="inpPrice" type="number" placeholder="$" style="width:50px;" title="單價">
-                        <button class="btn btn-danger" onclick="deleteCustomer()">🗑️</button>
+            <button @click="createNewOrder" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-95">
+                <i class="fas fa-plus"></i> 新增訂單
+            </button>
+        </header>
+
+        <div v-if="loading" class="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3">
+            <i class="fas fa-circle-notch animate-spin text-3xl text-emerald-500"></i>
+            <span class="font-mono text-xs">正在與資料庫同步...</span>
+        </div>
+
+        <div v-else class="flex-1 overflow-x-auto custom-scroll p-6 bg-slate-100">
+            <div class="flex gap-5 h-full min-w-max pb-2">
+                <div v-for="(group, groupKey) in groupedOrders" :key="groupKey" 
+                     :class="['flex-shrink-0 flex flex-col bg-slate-200/50 rounded-2xl border border-slate-200 max-h-full transition-all duration-300', getSmartColumnWidth(group.length)]">
+                    
+                    <div class="px-4 py-3 border-b border-slate-300/50 flex justify-between items-center sticky top-0 bg-slate-100/80 backdrop-blur rounded-t-2xl z-10">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full shadow-sm" :class="getGroupColor(groupKey)"></div>
+                            <span class="font-bold text-slate-700">{{ groupKey === 'undefined' ? '未分類' : groupKey }}</span>
+                        </div>
+                        <span class="bg-white text-slate-500 text-xs px-2 py-0.5 rounded-full font-bold shadow-sm">{{ group.length }}</span>
                     </div>
-                    <div class="row" style="background:#f8f9fa; padding:8px; border-radius:4px;">
-                        <span style="font-size:0.8rem; color:#666;">備註A:</span> <input id="inpNoteA" style="flex:1;">
-                        <span style="font-size:0.8rem; color:#666;">備註B:</span> <input id="inpNoteB" style="flex:1;">
-                        <label style="margin-left:10px; font-size:0.9rem; color:red; font-weight:bold;">
-                            <input type="checkbox" id="chkSuspended"> 暫停訂購
+
+                    <div class="flex-1 overflow-y-auto custom-scroll p-3">
+                        <div :class="['grid gap-3', getSmartGridCols(group.length)]">
+                            <div v-for="order in group" :key="order.id" 
+                                 @click="editOrder(order)"
+                                 class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer group relative overflow-hidden flex flex-col justify-between min-h-[140px]">
+                                
+                                <div class="absolute left-0 top-0 bottom-0 w-1" :class="getTypeColor(order.type)"></div>
+
+                                <div>
+                                    <div class="flex justify-between items-start mb-2 pl-2">
+                                        <h3 class="font-bold text-slate-800 text-lg leading-tight truncate">{{ order.customerName || '未命名' }}</h3>
+                                        <div class="flex flex-col items-end">
+                                            <span class="text-xs font-mono text-slate-400">{{ order.area || '未分區' }}</span>
+                                            <span class="text-emerald-600 font-extrabold font-mono text-sm mt-1">${{ (order.totalAmount || 0).toLocaleString() }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pl-2 mb-2">
+                                        <div class="text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded inline-block border border-slate-100">
+                                            <i class="far fa-calendar-alt mr-1"></i>
+                                            {{ formatDateRangeShort(order.dates) || '無日期' }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between pl-2 mt-auto pt-2 border-t border-slate-50">
+                                    <div class="flex gap-1" @click.stop>
+                                        <button v-for="st in statusOptions" :key="st"
+                                            @click="quickUpdateStatus(order, st)"
+                                            :class="[order.status === st ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-400 hover:bg-slate-200']"
+                                            class="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold transition"
+                                            :title="st">
+                                            {{ st.substring(1,2) }}
+                                        </button>
+                                    </div>
+                                    <button @click.stop="openHistory(order.customerName)" class="text-slate-300 hover:text-emerald-500 transition" title="歷史紀錄">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <transition name="slide">
+        <div v-if="editMode" class="fixed inset-0 z-40 bg-slate-100 flex flex-col md:flex-row overflow-hidden">
+            
+            <div class="w-full md:w-[320px] bg-white border-r border-slate-200 flex flex-col shadow-xl z-50">
+                <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                    <h2 class="font-bold text-lg text-slate-800"><i class="fas fa-edit text-emerald-500 mr-2"></i>{{ form.id ? '編輯訂單' : '建立新訂單' }}</h2>
+                    <button @click="closeEdit" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto custom-scroll p-6 space-y-6">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">顧客姓名</label>
+                        <input type="text" v-model="form.customerName" @input="onNameInput" list="customer-list" 
+                            class="w-full text-lg font-bold border-b-2 border-slate-200 bg-transparent focus:border-emerald-500 outline-none py-1 placeholder-slate-300 transition-colors" placeholder="輸入姓名...">
+                        <datalist id="customer-list"><option v-for="c in savedCustomers" :value="c.name"></option></datalist>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">地區</label>
+                            <input type="text" v-model="form.area" list="area-options" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <datalist id="area-options"><option v-for="a in uniqueAreas" :value="a"></option></datalist>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">單價</label>
+                            <input type="number" v-model.number="form.unitPrice" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-2 text-sm font-mono text-right focus:ring-2 focus:ring-emerald-500 outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">訂單類型</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button v-for="t in ['晨間','家庭號','團購']" :key="t" @click="form.type = t"
+                                :class="[form.type === t ? 'ring-2 ring-emerald-500 bg-emerald-50 text-emerald-700' : 'bg-white border border-slate-200 text-slate-500']"
+                                class="py-2 rounded-lg text-xs font-bold transition-all">
+                                {{ t }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">狀態</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button v-for="s in statusOptions" :key="s" @click="form.status = s"
+                                :class="[form.status === s ? 'bg-slate-800 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50']"
+                                class="py-2 rounded-lg text-xs font-bold transition-all">
+                                {{ s }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100">
+                        <label class="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-slate-50 transition">
+                            <input type="checkbox" v-model="form.ignoreHolidays" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                            <span class="text-xs font-bold text-slate-600">強制配送 (忽略國定假日)</span>
                         </label>
                     </div>
                 </div>
 
-                <details class="billing-accordion">
-                    <summary class="billing-summary">
-                        <span>💳 帳務與收款管理</span>
-                        <span style="font-size:0.8rem; color:#666;">點擊展開</span>
-                    </summary>
-                    <div class="billing-content">
-                        <div class="row">
-                            <input type="month" id="billMonth" onchange="calcBill()">
-                            <button class="btn btn-warning" onclick="calcBill(true)">🔄 重新計算</button>
+                <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-2">
+                    <button @click="saveOrder" :disabled="isSaving" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold shadow-lg shadow-emerald-500/30 transition-all flex items-center justify-center gap-2">
+                        <i v-if="isSaving" class="fas fa-circle-notch animate-spin"></i>
+                        <i v-else class="fas fa-save"></i>
+                        儲存訂單
+                    </button>
+                    <button v-if="form.id" @click="deleteOrder" class="w-full text-red-400 hover:bg-red-50 hover:text-red-500 py-2 rounded-xl text-xs font-bold transition">
+                        刪除此訂單
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-100">
+                
+                <div class="bg-white border-b border-slate-200 p-3 flex flex-wrap gap-4 items-center justify-between shrink-0 pl-4 md:pl-6 shadow-sm z-10">
+                    <div class="flex items-center gap-2">
+                         <div class="flex bg-slate-100 rounded-lg p-1">
+                            <button @click="setDays('weekday')" class="px-3 py-1 rounded-md text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm transition">平日</button>
+                            <button @click="setDays('everyday')" class="px-3 py-1 rounded-md text-xs font-bold text-slate-600 hover:bg-white hover:shadow-sm transition">全天</button>
                         </div>
-                        <div id="billResult">
-                            <div class="bill-stat-row"><span>應送總瓶數:</span> <b id="b_qty">0</b></div>
-                            <div class="bill-stat-row"><span>應收金額:</span> <b id="b_amt" style="color:var(--accent)">$0</b></div>
+                        <div class="h-6 w-px bg-slate-200 mx-2"></div>
+                        <div class="flex gap-1">
+                            <label v-for="d in [1,2,3,4,5,6,0]" :key="d" 
+                                :class="['w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold cursor-pointer transition select-none border', form.selectedDays.includes(d) ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-white text-slate-300 border-slate-200 hover:border-slate-300']">
+                                <input type="checkbox" :value="d" v-model="form.selectedDays" class="hidden" @change="generateDates">
+                                {{ dayMap[d] }}
+                            </label>
                         </div>
-                        <div class="row" style="border-top:1px dashed #ddd; padding-top:10px;">
-                            <input type="number" id="payAmount" placeholder="收款金額" style="width:100px;">
-                            <input type="text" id="payNote" placeholder="備註 (例: 現金/轉帳)" style="flex:1;">
-                            <button class="btn btn-success" onclick="addPayment()">✅ 確認收款</button>
-                        </div>
-                        <div style="font-size:0.75rem; color:#999; margin-top:5px;">* 收款操作將寫入系統流水帳</div>
                     </div>
-                </details>
 
-                <div class="header-container">
-                    <div class="row" style="justify-content:space-between;">
-                        <div id="patternBox" class="row"></div>
-                        <label><input type="checkbox" id="chkHoliday"> 見紅不休</label>
+                    <div class="flex items-center gap-2">
+                        <input type="month" v-model="dateRange.start" @change="generateDates" class="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono">
+                        <i class="fas fa-arrow-right text-slate-300 text-xs"></i>
+                        <input type="month" v-model="dateRange.end" @change="generateDates" class="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono">
                     </div>
-                    <table style="width:100%; border-collapse:collapse; text-align:center; font-size:0.85rem; margin-top:5px;">
-                        <thead><tr style="background:#eee;"><th></th><th>原</th><th>甜</th><th>巧</th><th>草</th><th>黑</th></tr></thead>
-                        <tbody id="matrixBody"></tbody>
-                    </table>
                 </div>
 
-                <div class="cal-wrapper" id="calendarGrid"></div>
-                <div style="height:50px;"></div>
-            </div>
-            
-            <div class="fab" id="fabSave" style="display:none;" onclick="saveData()">💾</div>
-        </main>
-    </div>
+                <div class="flex-1 overflow-y-auto custom-scroll p-6">
+                    <div class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
+                        <div v-for="(monthData, mIndex) in monthsGrid" :key="mIndex" class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                            
+                            <div class="bg-slate-50 px-4 py-3 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-100 transition" @click="toggleMonth(monthData.days)">
+                                <span class="font-bold text-slate-700 font-mono">{{ monthData.title }}</span>
+                                <div class="flex items-center gap-2">
+                                    <span v-if="monthData.total > 0" class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">{{ monthData.total }} 瓶</span>
+                                </div>
+                            </div>
 
-    <div id="view-finance" class="view-section">
-        <div class="finance-layout">
-            <div class="finance-panel">
-                <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-                    <h3>💸 財務流水帳 (依登入時間)</h3>
-                    <button class="btn btn-primary" onclick="loadFinanceLogs()">🔄 刷新</button>
+                            <div class="p-3">
+                                <div class="grid grid-cols-7 mb-2 text-center">
+                                    <span class="text-[10px] text-slate-400 font-bold" v-for="w in ['一','二','三','四','五','六','日']" :key="w">{{w}}</span>
+                                </div>
+                                <div class="grid grid-cols-7 gap-1.5">
+                                    <div v-for="n in monthData.startDay" :key="'pad-'+n"></div>
+                                    <div v-for="d in monthData.days" :key="d.fullDate" 
+                                         @click="d.isValid ? toggleDateQty(d) : null" 
+                                         :class="['aspect-square rounded-lg flex flex-col items-center justify-center relative transition-all duration-100 border select-none',
+                                            d.isValid 
+                                                ? (d.qty > 0 ? 'bg-emerald-500 border-emerald-600 shadow-md transform scale-105 z-10 cursor-pointer' : 'bg-white border-slate-100 hover:border-emerald-300 hover:bg-emerald-50 cursor-pointer text-slate-600')
+                                                : 'bg-slate-100/40 border-transparent opacity-40 cursor-default text-slate-300'
+                                         ]">
+                                        <div v-if="d.isSpecial" class="absolute top-1 right-1 w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
+                                        <span class="text-xs font-bold leading-none" :class="d.qty > 0 ? 'text-white' : ''">{{ d.dateStr }}</span>
+                                        <div v-if="d.qty > 0" class="absolute -bottom-1 -right-1 w-4 h-4 bg-white text-emerald-600 rounded-full flex items-center justify-center text-[9px] font-extrabold shadow border border-emerald-100">{{ d.qty }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div style="flex:1; overflow-y:auto;">
-                    <table class="log-table">
-                        <thead><tr><th>時間</th><th>客戶</th><th>月份</th><th>金額</th><th>備註</th><th>經手人</th></tr></thead>
-                        <tbody id="financeLogBody"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="finance-panel">
-                <h3>🛡️ 系統操作日誌 (回朔)</h3>
-                <div style="flex:1; overflow-y:auto; margin-top:10px;">
-                    <ul id="auditLogList" style="list-style:none; padding:0; font-size:0.85rem; color:#555;"></ul>
+
+                <div class="h-48 bg-white border-t border-slate-200 flex flex-col shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-20">
+                    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
+                        <div class="flex items-center gap-2">
+                             <i class="fas fa-receipt text-slate-400"></i>
+                             <span class="text-xs font-bold text-slate-600">帳單預覽</span>
+                        </div>
+                        <div class="flex bg-white rounded p-0.5 shadow-sm border border-slate-200">
+                             <button @click="copyMode='A'" :class="['text-[10px] px-2 py-0.5 rounded transition font-bold', copyMode==='A'?'bg-emerald-500 text-white':'text-slate-400']">明細</button>
+                             <button @click="copyMode='B'" :class="['text-[10px] px-2 py-0.5 rounded transition font-bold', copyMode==='B'?'bg-emerald-500 text-white':'text-slate-400']">月結</button>
+                        </div>
+                    </div>
+                    <div class="flex-1 flex overflow-hidden">
+                        <textarea readonly v-model="generatedBillText" class="flex-1 p-4 text-xs font-mono text-slate-600 outline-none resize-none leading-relaxed bg-slate-50/50"></textarea>
+                        <div class="w-48 bg-white border-l border-slate-200 p-4 flex flex-col justify-center items-end gap-1">
+                            <span class="text-xs text-slate-400 font-bold uppercase">Total Estimate</span>
+                            <span class="text-2xl font-extrabold text-emerald-600 font-mono tracking-tight">${{ totalAmount.toLocaleString() }}</span>
+                            <span class="text-xs text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full mt-1">{{ totalCount }} 瓶</span>
+                            <button @click="copyBill" class="mt-2 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded transition">
+                                <i class="far fa-copy"></i> 複製內文
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </transition>
 
-    <div id="view-prod" class="view-section">
-        <div class="prod-layout">
-            <div class="harvest-controls">
-                <h3>🌾 採收與供需比對</h3>
-                <input type="date" id="harvestDate">
-                <input type="number" id="harvestWeight" placeholder="採收公斤數 (kg)" style="width:120px;">
-                <input type="text" id="harvestNote" placeholder="備註 (例:早班)" style="width:150px;">
-                <button class="btn btn-success" onclick="saveHarvest()">➕ 登記採收</button>
-                <span style="flex:1;"></span>
-                <button class="btn btn-accent" onclick="calcForecast()">📊 計算未來兩週預測</button>
+    <transition name="fade">
+        <div v-if="historyModal.show" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4" @click.self="historyModal.show = false">
+            <div class="bg-white w-full max-w-5xl h-[80vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+                <div class="w-full md:w-1/2 bg-slate-50 flex flex-col border-r border-slate-200">
+                    <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-white">
+                        <h3 class="font-bold text-lg text-slate-800">{{ historyModal.customerName }} <span class="text-xs text-slate-400">歷史紀錄</span></h3>
+                        <button @click="historyModal.show = false" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto custom-scroll p-4 space-y-3">
+                        <div v-for="ord in historyModal.orders" :key="ord.id" 
+                             :class="['bg-white border rounded-xl p-3 cursor-pointer transition flex items-center gap-3 relative overflow-hidden', historyModal.selectedIds.includes(ord.id) ? 'border-emerald-500 ring-1 ring-emerald-500 shadow-md' : 'border-slate-200 hover:border-emerald-300']"
+                             @click="toggleHistorySelection(ord)">
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center mb-1">
+                                    <span class="text-[10px] bg-slate-100 text-slate-500 px-1.5 rounded font-bold">{{ formatDateRangeShort(ord.dates) }}</span>
+                                    <span class="text-emerald-700 font-bold font-mono">${{ ord.totalAmount }}</span>
+                                </div>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-[10px] text-slate-400">{{ ord.totalCount }} 瓶 ({{ ord.status }})</span>
+                                </div>
+                            </div>
+                            <div class="w-5 h-5 rounded border border-slate-300 flex items-center justify-center text-white text-xs" :class="historyModal.selectedIds.includes(ord.id) ? 'bg-emerald-500 border-emerald-500' : 'bg-white'"><i class="fas fa-check" v-show="historyModal.selectedIds.includes(ord.id)"></i></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2 bg-white flex flex-col">
+                    <div class="p-3 border-b border-slate-100 flex justify-between items-center">
+                        <span class="font-bold text-slate-700 text-sm">合併帳單預覽</span>
+                        <button v-if="historyModal.selectedIds.length > 0" @click="copyCombinedBill" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow hover:bg-emerald-700 transition"><i class="far fa-copy mr-1"></i>複製</button>
+                    </div>
+                    <textarea readonly :value="combinedBillText" class="flex-1 w-full p-6 text-xs font-mono text-slate-700 outline-none resize-none leading-relaxed"></textarea>
+                </div>
             </div>
+        </div>
+    </transition>
 
-            <div style="flex:1; overflow:auto;">
-                <table class="prod-matrix">
-                    <thead>
-                        <tr>
-                            <th>日期</th>
-                            <th>訂單總瓶數 / 明細</th>
-                            <th>預估需求 (kg)</th>
-                            <th>實際採收 (kg)</th>
-                            <th>結餘 (Gap)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="forecastBody">
-                        <tr><td colspan="5" style="padding:20px; color:#999;">請點擊「計算未來兩週預測」</td></tr>
-                    </tbody>
-                </table>
+    <transition name="fade">
+        <div v-if="settingsModal.show" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-6" @click.self="settingsModal.show = false">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col h-[60vh]">
+                <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+                    <h3 class="font-bold text-slate-800">假日設定</h3>
+                    <button @click="settingsModal.show = false"><i class="fas fa-times text-slate-400"></i></button>
+                </div>
+                <div class="p-4 flex-1 overflow-y-auto custom-scroll space-y-3">
+                    <div class="flex gap-2">
+                        <input type="date" v-model="newHoliday.date" class="flex-1 bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs">
+                        <input type="text" v-model="newHoliday.reason" placeholder="原因" class="flex-1 bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs">
+                        <button @click="addHoliday" class="bg-emerald-600 text-white rounded px-3 text-xs shadow"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="space-y-2 mt-4">
+                         <div v-for="(reason, date) in specialDays" :key="date" class="flex justify-between items-center bg-slate-50 p-2 rounded border border-slate-100">
+                            <div><div class="text-[11px] font-bold text-slate-700">{{ date }}</div><div class="text-[10px] text-purple-600 font-bold">{{ reason }}</div></div>
+                            <button @click="removeHoliday(date)" class="text-slate-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div style="font-size:0.8rem; color:#666; padding:0 20px;">* 需求重量依據「設定」頁面中的產品單瓶重量計算。</div>
+        </div>
+    </transition>
+
+    <div v-if="notification.show" class="fixed bottom-6 right-6 z-[100] bg-slate-800 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-bounce-in">
+        <i :class="['fas', notification.type === 'error' ? 'fa-exclamation-circle text-red-400' : 'fa-check-circle text-emerald-400']"></i>
+        <div>
+            <h4 class="font-bold text-sm">{{ notification.title }}</h4>
+            <p class="text-xs text-slate-400">{{ notification.message }}</p>
         </div>
     </div>
 
-    <div id="view-settings" class="view-section">
-        <div class="settings-layout">
-            <div class="setting-card">
-                <h3>🥛 產品項目與重量設定</h3>
-                <div class="row" style="margin-bottom:10px;">
-                    <input id="prodName" placeholder="產品名 (如:原味)" style="width:120px;">
-                    <input id="prodWeight" type="number" placeholder="單瓶重量(g)" style="width:100px;">
-                    <input id="prodPrice" type="number" placeholder="預設單價" style="width:80px;">
-                    <button class="btn btn-primary" onclick="addProduct()">新增/更新</button>
-                </div>
-                <div id="productList"></div>
-            </div>
-
-            <div class="setting-card">
-                <h3>📅 全域日程控管 (颱風/假日)</h3>
-                <div class="row" style="margin-bottom:10px;">
-                    <input type="date" id="globalDate">
-                    <select id="globalType">
-                        <option value="typhoon">🌪️ 颱風/緊急停送 (扣款)</option>
-                        <option value="holiday">🔴 國定假日 (依見紅不休)</option>
-                    </select>
-                    <button class="btn btn-danger" onclick="addGlobalEvent()">設定</button>
-                </div>
-                <ul id="globalEventList" style="padding-left:20px; color:#555;"></ul>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-<div id="loadingModal">
-    <div class="loading-box">
-        <h3>資料處理中...</h3>
-        <div style="width:100%; height:4px; background:#eee; margin-top:10px;"><div id="progressBar" style="width:0; height:100%; background:var(--accent);"></div></div>
-    </div>
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy, getDocs, setDoc, getDoc, serverTimestamp, limit, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { createApp, ref, computed, reactive, onMounted, watch } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getDatabase, ref as dbRef, push, onValue, remove, update, set } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-    // --- Configuration (Update for V16.2) ---
+    // CONFIG: 請替換為您的 Firebase 設定
     const firebaseConfig = {
-        apiKey: "AIzaSyALj-w6MSC_5CgGCVUVFveoV8-ykRxcu24",
-        authDomain: "crm-1225-003.firebaseapp.com",
-        projectId: "crm-1225-003",
-        storageBucket: "crm-1225-003.firebasestorage.app",
-        messagingSenderId: "566985177794",
-        appId: "1:566985177794:web:fcf21c033bd62c3bd7195b"
-    };
+            apiKey: "AIzaSyB6D9vh6J2mdnjz2VXEVe99oi7oLF-irFo",
+            authDomain: "crm-ts-1225-001.firebaseapp.com",
+            databaseURL: "https://crm-ts-1225-001-default-rtdb.firebaseio.com",
+            projectId: "crm-ts-1225-001",
+            storageBucket: "crm-ts-1225-001.firebasestorage.app",
+            messagingSenderId: "925760221722",
+            appId: "1:925760221722:web:1aeda0b82f1f16b8dcd7a3"
+        };
+
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db = getDatabase(app);
 
-    // Collections
-    const C_CUSTOMERS = "customers_v16"; 
-    const C_PRODUCTS = "products_v16";
-    const C_HARVEST = "harvests_v16";
-    const C_FINANCE = "finance_logs_v16";
-    const C_AUDIT = "audit_logs_v16";
-    const C_GLOBAL = "global_settings_v16";
-
-    // Constants
-    const SECTORS = ["大埔", "二鬮", "添福", "中園街", "弘道", "老街", "長泰街", "介壽路", "永安街", "光明路", "大同路", "中華路", "中正路", "菜市場", "中山路", "大仁路", "復興路", "北大", "鶯歌", "其他"];
-    const FLAVORS = ["原味", "甜味", "巧克力", "草莓", "黑糖"];
-    const DAYS = ["日","一","二","三","四","五","六"];
-
-    // State
-    let customersData = [];
-    let productsMap = {}; 
-    let globalEvents = {}; 
-    let currentId = null;
-    let currentMatrix = {};
-    let manualOverrides = {};
-
-    // --- Initialization ---
-    window.onload = async () => {
-        initHub();
-        initUI();
-        await loadSettings();
-        subscribeCustomers();
-    };
-
-    function initHub() {
-        window.switchView = (viewId) => {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.hub-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(`view-${viewId}`).classList.add('active');
-            document.querySelector(`button[onclick="switchView('${viewId}')"]`).classList.add('active');
+    createApp({
+        setup() {
+            // --- STATE ---
+            const isConnected = ref(false);
+            const loading = ref(true);
+            const isSaving = ref(false);
+            const currentView = ref('kanban');
+            const searchQuery = ref('');
             
-            if(viewId === 'finance') loadFinanceLogs();
-            if(viewId === 'settings') renderProductList();
-        };
-    }
-
-    function initUI() {
-        const sel = document.getElementById('inpSector');
-        SECTORS.forEach(s => { const o = document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
-        
-        const tb = document.getElementById('matrixBody');
-        [1,2,3,4,5,6,0].forEach(d => {
-            let html = `<td style="font-weight:bold; color:${d===0||d===6?'red':'#333'}">${DAYS[d]}</td>`;
-            FLAVORS.forEach(f => {
-                const key = `${d}_${f}`;
-                const opts = (f==="原味")?[1,2,4,6]:[1,2];
-                let btns = opts.map(v => `<span class="c-item" style="display:inline-block; padding:2px 6px; border:1px solid #ddd; margin:1px; border-radius:3px;" data-key="${key}" data-val="${v}" onclick="toggleMx(this)">${v}</span>`).join('');
-                html += `<td>${btns}</td>`;
+            // Data
+            const orders = ref([]);
+            const savedCustomers = ref([]);
+            const specialDays = ref({});
+            
+            // Editing State
+            const editMode = ref(false);
+            const form = reactive({ 
+                id: null, customerName: '', area: '', unitPrice: 30, 
+                status: '暫存', type: '晨間', selectedDays: [1], ignoreHolidays: false 
             });
-            const tr = document.createElement('tr'); tr.innerHTML = html; tb.appendChild(tr);
-        });
+            const quantityMap = reactive(new Map());
+            const dateRange = reactive({ start: '2025-06', end: '2026-03' }); // Smart default
+            
+            // UI Helpers
+            const statusOptions = ['暫存', '已通知', '已出帳', '已收款'];
+            const filterStatus = ref([...statusOptions]);
+            const dayMap = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 0: '日' };
+            const copyMode = ref('A');
+            
+            // Modals
+            const settingsModal = reactive({ show: false });
+            const historyModal = reactive({ show: false, customerName: '', orders: [], selectedIds: [] });
+            const newHoliday = reactive({ date: '', reason: '' });
+            const notification = reactive({ show: false, title: '', message: '', type: 'success' });
+            const fileInput = ref(null);
 
-        const ptBox = document.getElementById('patternBox');
-        [{l:"平日",d:[1,2,3,4,5]}, {l:"每天",d:[0,1,2,3,4,5,6]}, {l:"一三五",d:[1,3,5]}].forEach(p => {
-            const b = document.createElement('button'); b.textContent=p.l; b.className='btn btn-primary'; b.style.marginRight='5px';
-            b.onclick = () => {
-                document.querySelectorAll('span[data-key]').forEach(e=>e.style.background='white');
-                currentMatrix={};
-                p.d.forEach(d => {
-                    const k=`${d}_原味`; currentMatrix[k]=1;
-                    const el = document.querySelector(`span[data-key="${k}"][data-val="1"]`);
-                    if(el) { el.style.background='#8e44ad'; el.style.color='white'; }
+            // --- COMPUTED ---
+            const uniqueAreas = computed(() => [...new Set(savedCustomers.value.map(c => c.area).filter(Boolean))]);
+            
+            const filteredOrders = computed(() => {
+                return orders.value.filter(o => {
+                    const statusMatch = filterStatus.value.includes(o.status || '暫存');
+                    const searchLower = searchQuery.value.toLowerCase();
+                    const name = o.customerName || '';
+                    const area = o.area || '';
+                    const searchMatch = !searchQuery.value || name.toLowerCase().includes(searchLower) || area.toLowerCase().includes(searchLower);
+                    return statusMatch && searchMatch;
+                }).sort((a,b) => new Date(b.updatedAt||0) - new Date(a.updatedAt||0));
+            });
+
+            const groupedOrders = computed(() => {
+                const groups = {};
+                filteredOrders.value.forEach(o => {
+                    const key = o.status || '暫存';
+                    if (!groups[key]) groups[key] = [];
+                    groups[key].push(o);
                 });
-                renderCal();
-            };
-            ptBox.appendChild(b);
-        });
-        document.getElementById('billMonth').value = new Date().toISOString().slice(0,7);
-        
-        // Import Logic (Restored V15)
-        document.getElementById('csvInput').addEventListener('change', importCSV);
-    }
+                return groups;
+            });
 
-    // --- Core Data Logic ---
-    async function loadSettings() {
-        onSnapshot(collection(db, C_PRODUCTS), (snap) => {
-            snap.forEach(d => { productsMap[d.data().name] = d.data(); });
-            renderProductList();
-        });
-        onSnapshot(doc(db, C_GLOBAL, "calendar"), (docSnap) => {
-            if(docSnap.exists()) {
-                globalEvents = docSnap.data();
-                renderGlobalList();
-                if(currentId) renderCal();
-            }
-        });
-    }
+            // Logic from v3.7.0: Generate Calendar Grid
+            const monthsGrid = computed(() => {
+                if (!dateRange.start || !dateRange.end) return [];
+                const [sy, sm] = dateRange.start.split('-').map(Number);
+                const [ey, em] = dateRange.end.split('-').map(Number);
+                const start = new Date(sy, sm - 1, 1);
+                const end = new Date(ey, em, 0);
+                const activeDays = new Set(form.selectedDays);
+                const grids = [];
+                let current = new Date(start);
 
-    function subscribeCustomers() {
-        onSnapshot(query(collection(db, C_CUSTOMERS), orderBy("updatedAt", "desc")), (snap) => {
-            customersData = [];
-            snap.forEach(d => customersData.push({id: d.id, data: d.data()}));
-            filterList();
-        });
-    }
+                while (current <= end) {
+                    const y = current.getFullYear();
+                    const m = current.getMonth();
+                    const mStr = (m + 1).toString().padStart(2, '0');
+                    const monthKey = `${y}-${mStr}`;
+                    const daysInMonth = new Date(y, m + 1, 0).getDate();
+                    const firstDayOfWeek = (new Date(y, m, 1).getDay() - 1 + 7) % 7;
+                    const days = [];
+                    let totalQty = 0;
 
-    window.toggleMx = (el) => {
-        const k = el.dataset.key; const v = parseInt(el.dataset.val);
-        const active = el.style.background === 'rgb(142, 68, 173)';
-        document.querySelectorAll(`span[data-key="${k}"]`).forEach(e=>{e.style.background='white'; e.style.color='#333';});
-        if(active) delete currentMatrix[k];
-        else { currentMatrix[k] = v; el.style.background='#8e44ad'; el.style.color='white'; }
-        renderCal();
-    };
-
-    // --- Operations View Functions ---
-    window.filterList = () => {
-        const key = document.getElementById('searchInput').value.toLowerCase();
-        const list = document.getElementById('customerList');
-        list.innerHTML = '';
-        
-        const filtered = customersData.filter(c => 
-            c.data.name.includes(key) || (c.data.phone||'').includes(key) || (c.data.address||'').includes(key)
-        );
-
-        filtered.sort((a,b) => {
-            let ia = SECTORS.indexOf(a.data.sector||"其他");
-            let ib = SECTORS.indexOf(b.data.sector||"其他");
-            return (ia===-1?99:ia) - (ib===-1?99:ib);
-        });
-
-        let lastSec = "";
-        filtered.forEach(c => {
-            const sec = c.data.sector || "其他";
-            if(sec !== lastSec) {
-                const h = document.createElement('div'); h.className='addr-header'; h.textContent=`🏙️ ${sec}`;
-                list.appendChild(h); lastSec = sec;
-            }
-            const li = document.createElement('li');
-            li.className = `c-item ${c.data.isSuspended?'suspended':''} ${c.id===currentId?'active':''}`;
-            li.innerHTML = `<span>${c.data.name}</span><span style="color:#999;font-size:0.75rem">${c.data.phone||''}</span>`;
-            li.onclick = () => loadCustomer(c);
-            list.appendChild(li);
-        });
-    };
-
-    window.resetForm = (isNew) => {
-        currentId = null;
-        document.getElementById('emptyState').style.display = isNew ? 'none' : 'block';
-        document.getElementById('opsWorkspace').style.display = isNew ? 'flex' : 'none';
-        document.getElementById('fabSave').style.display = isNew ? 'flex' : 'none';
-        
-        document.querySelectorAll('input').forEach(i => { if(i.type!=='checkbox' && i.type!=='date' && i.type!=='month' && i.type!=='file') i.value=''; });
-        document.getElementById('inpSector').value = "其他";
-        document.getElementById('inpPrice').value = 35;
-        document.getElementById('chkSuspended').checked = false;
-        document.getElementById('chkHoliday').checked = false;
-        
-        currentMatrix = {}; manualOverrides = {};
-        document.querySelectorAll('span[data-key]').forEach(e=>{e.style.background='white';e.style.color='#333'});
-        if(isNew) renderCal();
-    };
-
-    function loadCustomer(cObj) {
-        resetForm(false);
-        currentId = cObj.id;
-        const d = cObj.data;
-        
-        document.getElementById('emptyState').style.display = 'none';
-        document.getElementById('opsWorkspace').style.display = 'flex';
-        document.getElementById('fabSave').style.display = 'flex';
-
-        document.getElementById('inpName').value = d.name;
-        document.getElementById('inpPhone').value = d.phone||'';
-        document.getElementById('inpAddr').value = d.address||'';
-        document.getElementById('inpSector').value = d.sector||'其他';
-        document.getElementById('inpPrice').value = d.unitPrice||35;
-        document.getElementById('inpNoteA').value = d.noteA||'';
-        document.getElementById('inpNoteB').value = d.noteB||'';
-        document.getElementById('chkSuspended').checked = d.isSuspended||false;
-        document.getElementById('chkHoliday').checked = d.holidayDeliver||false;
-
-        currentMatrix = d.matrix || {};
-        manualOverrides = d.manualOverrides || {};
-
-        Object.keys(currentMatrix).forEach(k => {
-            const el = document.querySelector(`span[data-key="${k}"][data-val="${currentMatrix[k]}"]`);
-            if(el) { el.style.background='#8e44ad'; el.style.color='white'; }
-        });
-        renderCal();
-        calcBill();
-    }
-
-    window.saveData = async () => {
-        const name = document.getElementById('inpName').value;
-        if(!name) return alert("請輸入姓名");
-        
-        const data = {
-            name,
-            phone: document.getElementById('inpPhone').value,
-            address: document.getElementById('inpAddr').value,
-            sector: document.getElementById('inpSector').value,
-            unitPrice: parseInt(document.getElementById('inpPrice').value)||35,
-            noteA: document.getElementById('inpNoteA').value,
-            noteB: document.getElementById('inpNoteB').value,
-            isSuspended: document.getElementById('chkSuspended').checked,
-            holidayDeliver: document.getElementById('chkHoliday').checked,
-            matrix: currentMatrix,
-            manualOverrides: manualOverrides,
-            updatedAt: serverTimestamp()
-        };
-
-        if(currentId) {
-            await updateDoc(doc(db, C_CUSTOMERS, currentId), data);
-            addLog("update_customer", name, "更新基本資料");
-        } else {
-            await addDoc(collection(db, C_CUSTOMERS), data);
-            addLog("create_customer", name, "建立新客戶");
-        }
-        alert("✅ 儲存成功");
-    };
-
-    window.deleteCustomer = async () => {
-        if(!currentId || !confirm("確定刪除？")) return;
-        await deleteDoc(doc(db, C_CUSTOMERS, currentId));
-        addLog("delete_customer", document.getElementById('inpName').value, "永久刪除");
-        resetForm(false);
-    };
-
-    // --- CSV Import/Export (Restored from V15) ---
-    window.exportCSV = () => {
-        if(customersData.length === 0) return alert("無資料");
-        let csv = "\uFEFF姓名,電話,街區,地址,備註A,備註B,暫停訂購,單價,見紅不休,週日,週一,週二,週三,週四,週五,週六\n";
-        
-        customersData.forEach(item => {
-            const c = item.data;
-            const daysData = [];
-            for(let d=0; d<7; d++) {
-                let parts = [];
-                FLAVORS.forEach(f => {
-                    const k = `${d}_${f}`;
-                    if(c.matrix && c.matrix[k]>0) parts.push(`${f}${c.matrix[k]}`);
-                });
-                daysData.push(parts.join(";"));
-            }
-            const row = [
-                c.name, c.phone||"", c.sector||"其他", c.address||"", c.noteA||"", c.noteB||"",
-                c.isSuspended?"TRUE":"FALSE", c.unitPrice||35, c.holidayDeliver?"TRUE":"FALSE", ...daysData
-            ];
-            csv += row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",") + "\n";
-        });
-        
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(new Blob([csv], {type: 'text/csv;charset=utf-8;'}));
-        link.download = `V16_2_Export_${new Date().toISOString().slice(0,10)}.csv`;
-        link.click();
-    };
-
-    async function importCSV(e) {
-        const file = e.target.files[0];
-        if(!file) return;
-        const reader = new FileReader();
-        document.getElementById('loadingModal').style.display = 'flex';
-        
-        reader.onload = async (evt) => {
-            const text = evt.target.result;
-            const rows = text.split(/\r?\n/);
-            const headers = rows[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-            
-            const idx = {
-                name: headers.indexOf("姓名"), phone: headers.indexOf("電話"), addr: headers.indexOf("地址"),
-                sector: headers.indexOf("街區"), noteA: headers.indexOf("備註A"), noteB: headers.indexOf("備註B"),
-                susp: headers.indexOf("暫停訂購"), price: headers.indexOf("單價"), hol: headers.indexOf("見紅不休"),
-                days: [headers.indexOf("週日"), headers.indexOf("週一"), headers.indexOf("週二"), headers.indexOf("週三"), headers.indexOf("週四"), headers.indexOf("週五"), headers.indexOf("週六")]
-            };
-
-            if(idx.name === -1) { alert("CSV 格式錯誤: 缺少姓名"); document.getElementById('loadingModal').style.display='none'; return; }
-            
-            let count = 0;
-            const batchSize = 400; // Firestore batch limit is 500
-            let batch = writeBatch(db);
-            
-            for(let i=1; i<rows.length; i++) {
-                if(!rows[i].trim()) continue;
-                // Simple CSV split handling quotes
-                const cols = rows[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-                const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
-                
-                // Need to map cleanCols index back to original header index? 
-                // Actually the regex split might not align perfectly if empty columns exist.
-                // Robust approach: split by comma but respect quotes.
-                // Re-using specific logic from V15 for safety:
-                const rowArr = rows[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(s => s.trim().replace(/^"|"$/g, ''));
-                
-                const matrix = {};
-                idx.days.forEach((colIdx, dayIdx) => {
-                    if(colIdx > -1 && rowArr[colIdx]) {
-                        rowArr[colIdx].split(/[,;]/).forEach(item => {
-                            const match = item.match(/([\u4e00-\u9fa5]+)(\d+)/);
-                            if(match) matrix[`${dayIdx}_${match[1]}`] = parseInt(match[2]);
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        const dStr = d.toString().padStart(2, '0');
+                        const fDate = `${y}/${mStr}/${dStr}`;
+                        const fDateDash = `${y}-${mStr}-${dStr}`; 
+                        const dayOfWeek = new Date(y, m, d).getDay();
+                        const isValid = activeDays.has(dayOfWeek);
+                        const specialReason = specialDays.value[fDateDash];
+                        const isSpecial = !!specialReason;
+                        let qty = quantityMap.get(fDate) || 0;
+                        if (isValid) totalQty += qty;
+                        
+                        days.push({ 
+                            fullDate: fDate, dateStr: dStr, qty: qty, 
+                            isValid: isValid, isSpecial: isSpecial, specialReason: specialReason 
                         });
                     }
-                });
-
-                const docRef = doc(collection(db, C_CUSTOMERS));
-                batch.set(docRef, {
-                    name: rowArr[idx.name],
-                    phone: idx.phone>-1 ? rowArr[idx.phone] : "",
-                    address: idx.addr>-1 ? rowArr[idx.addr] : "",
-                    sector: idx.sector>-1 ? (rowArr[idx.sector]||"其他") : "其他",
-                    noteA: idx.noteA>-1 ? rowArr[idx.noteA] : "",
-                    noteB: idx.noteB>-1 ? rowArr[idx.noteB] : "",
-                    isSuspended: idx.susp>-1 ? (rowArr[idx.susp]==="TRUE") : false,
-                    unitPrice: idx.price>-1 ? (parseInt(rowArr[idx.price])||35) : 35,
-                    holidayDeliver: idx.hol>-1 ? (rowArr[idx.hol]==="TRUE") : false,
-                    matrix: matrix, manualOverrides: {}, updatedAt: serverTimestamp()
-                });
-
-                count++;
-                if(count % batchSize === 0) { await batch.commit(); batch = writeBatch(db); }
-                document.getElementById('progressBar').style.width = Math.min(100, Math.round((i / rows.length)*100)) + "%";
-            }
-            await batch.commit();
-            
-            document.getElementById('loadingModal').style.display = 'none';
-            alert(`匯入完成: ${count} 筆`);
-            e.target.value = '';
-        };
-        reader.readAsText(file);
-    }
-
-    // --- Calendar & Bill Logic ---
-    function renderCal() {
-        const grid = document.getElementById('calendarGrid');
-        grid.innerHTML = '';
-        const today = new Date();
-        const start = new Date(today.getFullYear(), today.getMonth(), 1);
-        
-        for(let i=0; i<2; i++) {
-            const viewD = new Date(start.getFullYear(), start.getMonth()+i, 1);
-            const y = viewD.getFullYear(); const m = viewD.getMonth();
-            const dim = new Date(y, m+1, 0).getDate();
-            const fd = new Date(y, m, 1).getDay();
-
-            let cells = '';
-            for(let k=0; k<fd; k++) cells += `<div></div>`;
-
-            let mTotal = 0;
-            for(let d=1; d<=dim; d++) {
-                const dateStr = `${y}-${(m+1).toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-                const dw = new Date(y,m,d).getDay();
-                
-                const globalType = globalEvents[dateStr];
-                const override = manualOverrides[dateStr];
-                const suspended = document.getElementById('chkSuspended').checked;
-                const holDeliver = document.getElementById('chkHoliday').checked;
-                const isSun = (dw===0);
-                
-                let bQty = 0; let txt = "";
-                FLAVORS.forEach(f => {
-                    const q = currentMatrix[`${dw}_${f}`] || 0;
-                    if(q>0) { bQty+=q; txt+=(f[0]+q); }
-                });
-
-                let state = 'st-normal'; let finalQty = bQty; let overlay = "";
-                if(bQty===0) state = 'st-none';
-
-                if (globalType === 'typhoon') { state = 'st-paused'; finalQty = 0; overlay = "颱風"; }
-                else if (override === 1) { state = 'st-paused'; finalQty = 0; overlay = "停"; }
-                else if (suspended) { state = 'st-paused'; finalQty = 0; overlay = "暫停"; }
-                else if ((isSun || globalType === 'holiday') && !holDeliver) { state = 'st-holiday'; finalQty = 0; }
-                
-                mTotal += finalQty;
-                cells += `<div class="cal-cell ${state}" onclick="cycleDate('${dateStr}')"><span style="position:absolute;top:1px;left:2px;font-weight:bold;">${d}</span>${finalQty>0 ? `<div class="content-badge">${txt}</div>` : ''}${overlay ? `<div class="suspend-overlay">${overlay}</div>` : ''}</div>`;
-            }
-
-            const card = document.createElement('div');
-            card.className='cal-card';
-            card.innerHTML = `<div style="font-weight:bold;margin-bottom:5px;">${y}/${m+1} (預估: ${mTotal}瓶)</div><div class="cal-grid">${cells}</div>`;
-            grid.appendChild(card);
-        }
-    }
-
-    window.cycleDate = (dateStr) => {
-        if(!currentId) return;
-        const old = manualOverrides[dateStr] || 0;
-        manualOverrides[dateStr] = (old === 0) ? 1 : 0;
-        if(manualOverrides[dateStr] === 0) delete manualOverrides[dateStr];
-        renderCal();
-    };
-
-    window.calcBill = async (isManualRecalc = false) => {
-        if(!currentId) return;
-        const mStr = document.getElementById('billMonth').value;
-        const [y, m] = mStr.split('-').map(Number);
-        const dim = new Date(y, m, 0).getDate();
-        
-        let totalBottles = 0;
-        for(let d=1; d<=dim; d++) {
-            const dateStr = `${y}-${m.toString().padStart(2,'0')}-${d.toString().padStart(2,'0')}`;
-            const dw = new Date(y, m-1, d).getDay();
-            
-            const globalType = globalEvents[dateStr];
-            const override = manualOverrides[dateStr];
-            const suspended = document.getElementById('chkSuspended').checked;
-            const holDeliver = document.getElementById('chkHoliday').checked;
-            const isSun = (dw===0);
-
-            let dailyQ = 0;
-            FLAVORS.forEach(f => dailyQ += (currentMatrix[`${dw}_${f}`]||0));
-
-            if (globalType === 'typhoon' || override === 1 || suspended) dailyQ = 0;
-            else if ((isSun || globalType === 'holiday') && !holDeliver) dailyQ = 0;
-            
-            totalBottles += dailyQ;
-        }
-
-        const basePrice = parseInt(document.getElementById('inpPrice').value) || 35;
-        const totalAmt = totalBottles * basePrice;
-
-        document.getElementById('b_qty').textContent = totalBottles;
-        document.getElementById('b_amt').textContent = `$${totalAmt}`;
-
-        if(isManualRecalc) {
-            await addLog("recalc_bill", document.getElementById('inpName').value, `重新計算${mStr}帳單: ${totalAmt}元`);
-            alert("已重新計算並記錄日誌");
-        }
-    };
-
-    window.addPayment = async () => {
-        const amt = document.getElementById('payAmount').value;
-        const note = document.getElementById('payNote').value;
-        if(!amt) return alert("請輸入金額");
-        
-        await addDoc(collection(db, C_FINANCE), {
-            customerId: currentId,
-            customerName: document.getElementById('inpName').value,
-            month: document.getElementById('billMonth').value,
-            amount: parseInt(amt),
-            note: note,
-            timestamp: serverTimestamp()
-        });
-        await addLog("collect_money", document.getElementById('inpName').value, `收款 $${amt} (${note})`);
-        document.getElementById('payAmount').value = '';
-        document.getElementById('payNote').value = '';
-        alert("✅ 收款已記錄");
-    };
-
-    // --- Finance & Logs ---
-    window.loadFinanceLogs = () => {
-        const tbody = document.getElementById('financeLogBody');
-        tbody.innerHTML = '<tr><td colspan="6">載入中...</td></tr>';
-        onSnapshot(query(collection(db, C_FINANCE), orderBy("timestamp", "desc"), limit(50)), (snap) => {
-            tbody.innerHTML = '';
-            snap.forEach(d => {
-                const r = d.data();
-                const ts = r.timestamp ? r.timestamp.toDate().toLocaleString() : '-';
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${ts}</td><td>${r.customerName}</td><td>${r.month}</td><td style="color:green;font-weight:bold;">$${r.amount}</td><td>${r.note}</td><td>Admin</td>`;
-                tbody.appendChild(tr);
+                    grids.push({ title: monthKey, days: days, startDay: firstDayOfWeek, total: totalQty });
+                    current = new Date(y, m + 1, 1);
+                }
+                return grids;
             });
-        });
-        const ul = document.getElementById('auditLogList');
-        onSnapshot(query(collection(db, C_AUDIT), orderBy("timestamp", "desc"), limit(50)), (snap) => {
-            ul.innerHTML = '';
-            snap.forEach(d => {
-                const r = d.data();
-                const ts = r.timestamp ? r.timestamp.toDate().toLocaleString() : '-';
-                const li = document.createElement('li');
-                li.style.borderBottom='1px solid #eee'; li.style.padding='5px';
-                li.innerHTML = `<b>[${ts}]</b> ${r.action} @ ${r.target} - ${r.detail}`;
-                ul.appendChild(li);
+
+            const totalCount = computed(() => {
+                let sum = 0;
+                for (const q of quantityMap.values()) sum += q;
+                return sum;
             });
-        });
-    };
+            const totalAmount = computed(() => Math.floor(totalCount.value * form.unitPrice));
 
-    // --- Production & Forecast (Updated V16.2: Breakdown) ---
-    window.saveHarvest = async () => {
-        const d = document.getElementById('harvestDate').value;
-        const w = document.getElementById('harvestWeight').value;
-        if(!d || !w) return alert("資料不全");
-        await addDoc(collection(db, C_HARVEST), { date: d, weight: parseFloat(w), note: document.getElementById('harvestNote').value, timestamp: serverTimestamp() });
-        addLog("add_harvest", "採收記錄", `${d}: ${w}kg`);
-        alert("登記成功");
-    };
-
-    window.calcForecast = async () => {
-        document.getElementById('loadingModal').style.display = 'flex';
-        const tbody = document.getElementById('forecastBody');
-        tbody.innerHTML = '';
-        
-        const days = [];
-        const today = new Date();
-        for(let i=0; i<14; i++) {
-            const d = new Date(today); d.setDate(today.getDate()+i);
-            days.push(d.toISOString().split('T')[0]);
-        }
-
-        const harvestMap = {};
-        const hSnap = await getDocs(query(collection(db, C_HARVEST), orderBy("date", "desc"), limit(30)));
-        hSnap.forEach(d => { harvestMap[d.data().date] = d.data().weight; });
-
-        let forecastMap = {}; // date -> {bottles, kg, flavors:{}}
-        const weightMap = {}; 
-        FLAVORS.forEach(f => weightMap[f] = (productsMap[f]?.weight || 936)/1000 );
-
-        customersData.forEach(cObj => {
-            const c = cObj.data;
-            if(c.isSuspended) return;
-
-            days.forEach(dateStr => {
-                const dateObj = new Date(dateStr);
-                const dw = dateObj.getDay();
+            // Logic from v3.7.0: Bill Text Generation
+            const generatedBillText = computed(() => {
+                const active = [];
+                const sortedKeys = Array.from(quantityMap.keys()).sort();
+                for(const k of sortedKeys) {
+                    if(quantityMap.get(k) > 0) active.push({ fullDate: k, dateStr: k.split('/')[2], qty: quantityMap.get(k) });
+                }
+                if (active.length === 0) return '尚未選擇日期...';
                 
-                const globalType = globalEvents[dateStr];
-                const override = (c.manualOverrides||{})[dateStr];
-                const isHol = (dw===0 || globalType==='holiday');
+                const header = active[0].fullDate.substring(0, 7).replace('/', '-');
+                const byMonth = {};
+                active.forEach(d => {
+                    const k = d.fullDate.substring(0, 7);
+                    if (!byMonth[k]) byMonth[k] = [];
+                    byMonth[k].push(d);
+                });
 
-                if(globalType === 'typhoon' || override === 1) return;
-                if(isHol && !c.holidayDeliver) return;
-
-                if(!forecastMap[dateStr]) forecastMap[dateStr] = {bottles:0, kg:0, flavors:{}};
-                
-                FLAVORS.forEach(f => {
-                    const q = (c.matrix||{})[`${dw}_${f}`] || 0;
-                    if(q>0) {
-                        forecastMap[dateStr].bottles += q;
-                        forecastMap[dateStr].kg += (q * weightMap[f]);
-                        forecastMap[dateStr].flavors[f] = (forecastMap[dateStr].flavors[f]||0) + q;
+                let details = '';
+                if (copyMode.value === 'A') {
+                    for(const [mKey, dates] of Object.entries(byMonth)) {
+                        const [y, m] = mKey.split('/');
+                        details += `\n📅 ${parseInt(m)}月配送:\n`;
+                        details += dates.map(d => `${parseInt(d.dateStr)}日${d.qty!==1?'('+d.qty+')':''}`).join('、') + '\n';
                     }
+                } else {
+                    details += '\n配送統計：\n';
+                    for(const [mKey, dates] of Object.entries(byMonth)) {
+                        const sum = dates.reduce((a,b)=>a+b.qty,0);
+                        details += `${parseInt(mKey.split('/')[1])}月: ${sum}瓶\n`;
+                    }
+                }
+                return `【五寮尖羊奶】配送帳單 (${header})\n客戶：${form.customerName}\n${details}------------------\n總計：${totalCount.value} 瓶\n應收：NT$${totalAmount.value.toLocaleString()}\n------------------\n請核對無誤後匯款，謝謝！`;
+            });
+
+            // --- METHODS ---
+            const showToast = (title, msg, type='success') => {
+                notification.title = title; notification.message = msg; notification.type = type; notification.show = true;
+                setTimeout(() => notification.show = false, 3000);
+            };
+
+            const loadData = () => {
+                onValue(dbRef(db, '.info/connected'), (s) => isConnected.value = s.val());
+                onValue(dbRef(db, 'orders'), (s) => { 
+                    const d = s.val(); 
+                    orders.value = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : []; 
+                    loading.value = false; 
                 });
-            });
-        });
+                onValue(dbRef(db, 'customers'), (s) => { savedCustomers.value = s.val() ? Object.values(s.val()) : []; });
+                onValue(dbRef(db, 'settings/holidays'), (s) => { specialDays.value = s.val() || {}; });
+            };
 
-        days.forEach(dateStr => {
-            const data = forecastMap[dateStr] || {bottles:0, kg:0, flavors:{}};
-            const act = harvestMap[dateStr] || 0;
-            const gap = act - data.kg;
+            const createNewOrder = () => {
+                form.id = null; form.customerName = ''; form.area = ''; form.unitPrice = 35;
+                form.status = '暫存'; form.type = '晨間'; form.selectedDays = [1,2,3,4,5]; form.ignoreHolidays = false;
+                quantityMap.clear();
+                editMode.value = true;
+            };
+
+            const editOrder = (o) => {
+                form.id = o.id;
+                form.customerName = o.customerName || ''; 
+                form.area = o.area || ''; 
+                form.unitPrice = o.unitPrice || 35;
+                form.status = o.status || '暫存'; 
+                form.type = o.type || '晨間'; 
+                form.selectedDays = o.selectedDays || [1];
+                form.ignoreHolidays = o.ignoreHolidays || false;
+                
+                quantityMap.clear();
+                if(o.dates) { 
+                    for(const [k, v] of Object.entries(o.dates)) { 
+                        quantityMap.set(k.replace(/-/g, '/'), v); 
+                    } 
+                }
+                // Try to infer month range from data
+                if (Object.keys(o.dates || {}).length > 0) {
+                     const dates = Object.keys(o.dates).sort();
+                     dateRange.start = dates[0].substring(0, 7);
+                }
+                editMode.value = true;
+            };
+
+            const closeEdit = () => editMode.value = false;
+
+            const onNameInput = () => { 
+                const f = savedCustomers.value.find(c => c.name === form.customerName); 
+                if (f) { 
+                    form.area = f.area || ''; form.unitPrice = f.unitPrice || 35;
+                    if(f.type) form.type=f.type; 
+                } 
+            };
+
+            const toggleDateQty = (d) => { 
+                let q = d.qty; 
+                if (q === 0) q = 1; else if (q === 1) q = 2; else if (q === 2) q = 1.5; else q = 0;
+                quantityMap.set(d.fullDate, q);
+            };
+
+            const toggleMonth = (days) => {
+                const validDays = days.filter(d => d.isValid);
+                if(validDays.length === 0) return;
+                const targets = form.ignoreHolidays ? validDays : validDays.filter(d => !d.isSpecial);
+                const hasQty = targets.some(d => quantityMap.get(d.fullDate) > 0);
+                targets.forEach(d => quantityMap.set(d.fullDate, hasQty ? 0 : 1));
+            };
+
+            const setDays = (type) => {
+                if(type === 'weekday') form.selectedDays = [1,2,3,4,5];
+                else form.selectedDays = [0,1,2,3,4,5,6];
+            };
+
+            const saveOrder = async () => {
+                if (!form.customerName) { showToast('錯誤', '請輸入顧客姓名', 'error'); return; }
+                isSaving.value = true;
+                try {
+                    const datesObj = {};
+                    for (const [k, v] of quantityMap.entries()) { if(v > 0) datesObj[k.replace(/\//g, '-')] = v; }
+                    
+                    const payload = {
+                        customerName: form.customerName, area: form.area || '未分區', unitPrice: form.unitPrice,
+                        status: form.status, type: form.type, selectedDays: form.selectedDays,
+                        totalAmount: totalAmount.value, totalCount: totalCount.value, dates: datesObj, 
+                        updatedAt: new Date().toISOString(), ignoreHolidays: form.ignoreHolidays
+                    };
+
+                    if (form.id) await update(dbRef(db, `orders/${form.id}`), payload);
+                    else { payload.createdAt = new Date().toISOString(); await push(dbRef(db, 'orders'), payload); }
+                    
+                    // Upsert Customer
+                    const key = btoa(encodeURIComponent(form.customerName)).replace(/[^a-zA-Z0-9]/g, '');
+                    await update(dbRef(db, `customers/${key}`), { 
+                        name: form.customerName, area: form.area, unitPrice: form.unitPrice, type: form.type 
+                    });
+                    
+                    showToast('儲存成功', '訂單資料已更新');
+                    closeEdit();
+                } catch (e) { showToast('失敗', e.message, 'error'); } 
+                finally { isSaving.value = false; }
+            };
+
+            const deleteOrder = async () => {
+                if(!confirm('確定要刪除嗎？')) return;
+                if(form.id) await remove(dbRef(db, `orders/${form.id}`));
+                closeEdit();
+            };
+
+            const quickUpdateStatus = async (order, st) => {
+                await update(dbRef(db, `orders/${order.id}`), { status: st });
+            };
+
+            // History & Combined Bill
+            const openHistory = (name) => {
+                if(!name) return;
+                historyModal.customerName = name;
+                historyModal.orders = orders.value.filter(o => o.customerName === name).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                historyModal.selectedIds = [];
+                historyModal.show = true;
+            };
             
-            // Generate Flavor Detail String
-            let flavorStr = "";
-            FLAVORS.forEach(f => {
-                if(data.flavors[f] > 0) flavorStr += `${f[0]}${data.flavors[f]} `;
+            const toggleHistorySelection = (ord) => {
+                const idx = historyModal.selectedIds.indexOf(ord.id);
+                if(idx > -1) historyModal.selectedIds.splice(idx, 1);
+                else historyModal.selectedIds.push(ord.id);
+            };
+
+            const combinedBillText = computed(() => {
+                if(historyModal.selectedIds.length === 0) return '請選擇左側訂單...';
+                const selected = historyModal.orders.filter(o => historyModal.selectedIds.includes(o.id));
+                let totalVal = 0, totalBtls = 0, details = '';
+                selected.forEach(o => {
+                    totalVal += (parseInt(o.totalAmount) || 0);
+                    totalBtls += (parseInt(o.totalCount) || 0);
+                    details += `• ${formatDateRangeShort(o.dates)} | ${o.totalCount}瓶 $${o.totalAmount}\n`;
+                });
+                return `【合併帳單】顧客：${historyModal.customerName}\n------------------\n${details}------------------\n總計：${totalBtls} 瓶\n應收總額：NT$${totalVal.toLocaleString()}`;
             });
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${dateStr}</td>
-                <td>
-                    <b>${data.bottles}</b>
-                    <span class="flavor-detail">${flavorStr}</span>
-                </td>
-                <td>${data.kg.toFixed(1)}</td>
-                <td>${act > 0 ? act : '-'}</td>
-                <td class="${gap>=0?'gap-pos':'gap-neg'}">${act>0 ? gap.toFixed(1) : '?'}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-        document.getElementById('loadingModal').style.display = 'none';
-    };
+            // Utils
+            const formatDateRangeShort = (dates) => {
+                if (!dates) return '';
+                const keys = Object.keys(dates).sort();
+                if (keys.length === 0) return '';
+                return `${keys[0].substring(5)} ~ ${keys[keys.length - 1].substring(5)}`;
+            };
+            const copyBill = () => { navigator.clipboard.writeText(generatedBillText.value).then(() => showToast('已複製', '帳單內容已複製')); };
+            const copyCombinedBill = () => { navigator.clipboard.writeText(combinedBillText.value).then(() => showToast('已複製', '合併帳單已複製')); };
+            
+            // Settings
+            const addHoliday = () => {
+                if(newHoliday.date && newHoliday.reason) {
+                    update(dbRef(db, 'settings/holidays'), { [newHoliday.date]: newHoliday.reason });
+                    newHoliday.date = ''; newHoliday.reason = '';
+                }
+            };
+            const removeHoliday = (date) => remove(dbRef(db, `settings/holidays/${date}`));
 
-    // --- Settings ---
-    window.renderProductList = () => {
-        const div = document.getElementById('productList');
-        div.innerHTML = '';
-        Object.values(productsMap).forEach(p => {
-            const item = document.createElement('div');
-            item.className = 'prod-list-item';
-            item.innerHTML = `<span><b>${p.name}</b> (${p.weight}g) $${p.price}</span> <button class="btn btn-danger" style="font-size:0.7rem">X</button>`;
-            div.appendChild(item);
-        });
-    };
+            // Import/Export
+            const exportData = () => {
+                const dataStr = JSON.stringify(orders.value, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `crm_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
+            };
+            const triggerImport = () => fileInput.value.click();
+            const handleImport = (e) => {
+                const file = e.target.files[0]; if(!file) return;
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if(Array.isArray(data) && confirm(`確認匯入 ${data.length} 筆資料？(將寫入資料庫)`)) {
+                            for(const item of data) { const { id, ...c } = item; await push(dbRef(db, 'orders'), c); }
+                            showToast('匯入成功', `成功載入 ${data.length} 筆`);
+                        }
+                    } catch(err) { showToast('匯入失敗', '格式錯誤', 'error'); }
+                };
+                reader.readAsText(file);
+            };
 
-    window.addProduct = async () => {
-        const name = document.getElementById('prodName').value;
-        const w = document.getElementById('prodWeight').value;
-        const p = document.getElementById('prodPrice').value;
-        if(!name) return;
-        await addDoc(collection(db, C_PRODUCTS), { name, weight: parseInt(w), price: parseInt(p) });
-        addLog("setting_change", "產品", `更新 ${name}: ${w}g / $${p}`);
-    };
+            // Layout Utils
+            const getSmartColumnWidth = (count) => count > 10 ? 'w-[40rem]' : 'w-72';
+            const getSmartGridCols = (count) => count > 10 ? 'grid-cols-2' : 'grid-cols-1';
+            const getGroupColor = (k) => {
+                if(k==='已收款') return 'bg-emerald-500'; if(k==='已出帳') return 'bg-blue-500'; 
+                if(k==='已通知') return 'bg-orange-500'; return 'bg-slate-400';
+            };
+            const getTypeColor = (t) => t === '家庭號' ? 'bg-pink-500' : (t === '團購' ? 'bg-purple-500' : 'bg-orange-500');
 
-    window.addGlobalEvent = async () => {
-        const d = document.getElementById('globalDate').value;
-        const t = document.getElementById('globalType').value;
-        if(!d) return;
-        globalEvents[d] = t;
-        await setDoc(doc(db, C_GLOBAL, "calendar"), globalEvents);
-        renderGlobalList();
-        addLog("setting_change", "全域日程", `設定 ${d} 為 ${t}`);
-    };
+            onMounted(loadData);
 
-    function renderGlobalList() {
-        const ul = document.getElementById('globalEventList');
-        ul.innerHTML = '';
-        Object.keys(globalEvents).sort().forEach(d => {
-            const li = document.createElement('li');
-            li.textContent = `${d}: ${globalEvents[d] === 'typhoon' ? '🌪️ 颱風停送' : '🔴 國定假日'}`;
-            ul.appendChild(li);
-        });
-    }
-
-    async function addLog(action, target, detail) {
-        await addDoc(collection(db, C_AUDIT), { action, target, detail, timestamp: serverTimestamp() });
-    }
-
+            return {
+                isConnected, loading, isSaving, currentView, searchQuery,
+                orders, groupedOrders, statusOptions, filterStatus, uniqueAreas,
+                editMode, form, dateRange, monthsGrid, totalCount, totalAmount, generatedBillText,
+                savedCustomers, dayMap, historyModal, settingsModal, newHoliday, notification, specialDays,
+                createNewOrder, editOrder, closeEdit, saveOrder, deleteOrder, onNameInput,
+                setDays, toggleDateQty, toggleMonth, generateDates: () => {}, // Triggered by computed
+                quickUpdateStatus, openHistory, toggleHistorySelection, combinedBillText,
+                copyBill, copyCombinedBill, addHoliday, removeHoliday,
+                exportData, triggerImport, handleImport, fileInput,
+                getSmartColumnWidth, getSmartGridCols, getGroupColor, getTypeColor, formatDateRangeShort
+            };
+        }
+    }).mount('#app');
 </script>
 </body>
 </html>
